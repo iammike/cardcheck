@@ -1,0 +1,278 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  color: #333;
+  background: #fff;
+}
+
+.container {
+  width: 320px;
+  padding: 16px;
+}
+
+h1 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #1a1a1a;
+}
+
+h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.card-summary-box {
+  background: #f5f5f5;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.card-summary-box p {
+  margin: 3px 0;
+  font-size: 13px;
+  color: #333;
+}
+
+.summary-title {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 6px !important;
+}
+
+.summary-label {
+  color: #666;
+}
+
+.variant-warning {
+  margin-top: 10px;
+  padding: 8px;
+  background: #fff3e6;
+  border-left: 3px solid #ff9800;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #8b5a00;
+}
+
+.variant-warning-label {
+  font-size: 11px;
+  color: #996600;
+  margin-bottom: 4px;
+}
+
+.variant-warning-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+}
+
+.variant-warning-detail {
+  font-size: 13px;
+  color: #333;
+  margin-top: 2px;
+}
+
+.variant-warning-hint {
+  font-size: 11px;
+  color: #996600;
+  margin-top: 6px;
+  font-style: italic;
+}
+
+.message {
+  text-align: center;
+  padding: 24px 0;
+  color: #666;
+}
+
+.detected {
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.detected p {
+  margin: 4px 0;
+}
+
+#card-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+#card-year, #card-set, #card-insert, #card-parallel, #card-number, #card-manufacturer, #card-features, #card-error, #card-grade {
+  color: #666;
+  font-size: 13px;
+}
+
+#card-year:empty, #card-set:empty, #card-insert:empty, #card-parallel:empty, #card-number:empty,
+#card-manufacturer:empty, #card-features:empty, #card-error:empty, #card-grade:empty {
+  display: none;
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 12px;
+  background: #0066cc;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.primary-btn:hover {
+  background: #0052a3;
+}
+
+.primary-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+#results-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.variant-note {
+  font-size: 12px;
+  color: #996600;
+  background: #fff8e6;
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.results-disclaimer {
+  font-size: 11px;
+  color: #999;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.result-item {
+  padding: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.result-item:hover {
+  border-color: #0066cc;
+  background: #f0f7ff;
+}
+
+.result-item .name {
+  font-weight: 500;
+}
+
+.result-item .category {
+  font-size: 12px;
+  color: #666;
+}
+
+#price-list {
+  margin-bottom: 12px;
+}
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.price-row:last-child {
+  border-bottom: none;
+}
+
+.price-row .grade {
+  color: #666;
+}
+
+.price-row .price {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.price-row-highlight {
+  background: #e8f5e9;
+  border-radius: 4px;
+  margin: 0 -8px;
+  padding: 8px !important;
+  border-left: 3px solid #4caf50;
+}
+
+#pricecharting-link {
+  display: block;
+  text-align: center;
+  color: #0066cc;
+  text-decoration: none;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+#pricecharting-link:hover {
+  text-decoration: underline;
+}
+
+#error {
+  color: #cc0000;
+}
+
+.no-price-message {
+  text-align: center;
+  padding: 16px;
+  color: #666;
+}
+
+.no-price-message p {
+  margin: 4px 0;
+}
+
+.no-price-hint {
+  font-size: 12px;
+  color: #999;
+}
+
+.secondary-btn {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.secondary-btn:hover {
+  background: #eee;
+}
+
+.back-btn {
+  width: 100%;
+  margin-top: 12px;
+}

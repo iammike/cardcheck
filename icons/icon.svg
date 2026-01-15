@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Card shape - black bold outline -->
+  <rect x="20" y="8" width="88" height="112" rx="8" fill="none" stroke="#000000" stroke-width="12"/>
+
+  <!-- Bold checkmark inside - black -->
+  <path d="M38 62 L56 82 L94 40" stroke="#000000" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

@@ -1,0 +1,10 @@
+# Build artifacts
+*.zip
+store-screenshot-*.png
+
+# macOS
+.DS_Store
+
+# Claude Code
+.claude/
+CLAUDE.md

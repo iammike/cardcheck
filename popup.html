@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>CardChecking</h1>
+
+    <div id="not-ebay" class="message hidden">
+      <p>Navigate to an eBay listing to check prices.</p>
+    </div>
+
+    <div id="loading" class="message hidden">
+      <p>Extracting card details...</p>
+    </div>
+
+    <div id="card-info" class="hidden">
+      <div class="detected">
+        <h2>Detected Card</h2>
+        <p id="card-name"></p>
+        <p id="card-year"></p>
+        <p id="card-set"></p>
+        <p id="card-number"></p>
+        <p id="card-parallel"></p>
+        <p id="card-insert"></p>
+        <p id="card-grade"></p>
+        <p id="card-manufacturer"></p>
+        <p id="card-features"></p>
+        <p id="card-error"></p>
+      </div>
+
+      <button id="search-btn" class="primary-btn">Search PriceCharting</button>
+    </div>
+
+    <div id="search-results" class="hidden">
+      <div id="results-card-summary" class="card-summary-box"></div>
+      <h2>Select Card</h2>
+      <div id="results-list"></div>
+    </div>
+
+    <div id="prices" class="hidden">
+      <div id="price-card-summary" class="card-summary-box"></div>
+      <h2>Prices</h2>
+      <div id="price-list"></div>
+      <a id="pricecharting-link" href="#" target="_blank">View on PriceCharting</a>
+    </div>
+
+    <div id="error" class="message hidden">
+      <p id="error-text"></p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
