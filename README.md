@@ -2,6 +2,17 @@
 
 A Chrome extension that helps sports card collectors check prices from SportsCardsPro while browsing eBay listings.
 
+## Screenshots
+
+**Detected Card & Price Lookup**
+![Detected card view](screenshots/detected-card.png)
+
+**Price Comparison by Grade**
+![Price view](screenshots/price-view.png)
+
+**Multiple Match Selection**
+![Select card view](screenshots/select-card.png)
+
 ## Features
 
 - **Automatic card detection** - Extracts player name, year, set, card number, and grade from eBay Item Specifics
