@@ -80,6 +80,9 @@ function parseSearchResults(html, query = '') {
     'portrait', 'luminance',
     // Sports
     'football', 'basketball', 'baseball', 'hockey', 'soccer',
+    // Soccer/International leagues and terms
+    'uefa', 'fifa', 'champions', 'league', 'premier', 'bundesliga', 'serie', 'liga',
+    'competitions', 'club', 'match', 'attax', 'finest', 'merlin', 'stadium',
     // Non-sports categories (from PriceCharting)
     'pokemon', 'amiibo', 'digimon', 'dragon', 'ball', 'garbage', 'pail', 'lorcana',
     'marvel', 'magic', 'one', 'piece', 'star', 'wars', 'yugioh',
