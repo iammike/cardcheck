@@ -189,9 +189,10 @@ elements.searchBtn.addEventListener('click', async () => {
   elements.searchBtn.disabled = true;
   elements.searchBtn.textContent = 'Searching...';
 
+  const sportsCard = isSportsCard(currentCardData);
+
   try {
     const query = buildSearchQuery(currentCardData);
-    const sportsCard = isSportsCard(currentCardData);
     console.log('Card data:', currentCardData);
     console.log('Search query:', query, 'isSportsCard:', sportsCard);
     let response = await chrome.runtime.sendMessage({
