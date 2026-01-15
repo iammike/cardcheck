@@ -60,13 +60,22 @@ function parseSearchResults(html, query = '') {
 
   // Brand/set keywords to exclude from player name matching
   const brandKeywords = [
+    // Card manufacturers
     'topps', 'panini', 'upper', 'deck', 'bowman', 'fleer', 'donruss', 'score', 'leaf',
+    // Set types
     'chrome', 'prizm', 'select', 'mosaic', 'optic', 'absolute', 'prestige', 'contenders',
     'national', 'treasures', 'immaculate', 'spectra', 'obsidian', 'origins', 'phoenix',
     'certified', 'limited', 'playoff', 'classics', 'legacy', 'clearly', 'stadium', 'club',
+    // Parallels/variants
     'refractor', 'parallel', 'auto', 'autograph', 'rookie', 'base', 'insert', 'gold', 'silver',
     'bronze', 'red', 'blue', 'green', 'orange', 'purple', 'pink', 'black', 'white', 'aqua',
-    'football', 'basketball', 'baseball', 'hockey', 'soccer'
+    'shimmer', 'holo', 'holographic', 'foil', 'prism',
+    // Sports
+    'football', 'basketball', 'baseball', 'hockey', 'soccer',
+    // Non-sports categories
+    'marvel', 'dc', 'pokemon', 'magic', 'yugioh', 'disney', 'star', 'wars', 'trek',
+    'anime', 'manga', 'gaming', 'entertainment', 'movie', 'film', 'television', 'tv',
+    'universe', 'annual', 'series'
   ];
 
   // Extract player name, card number, and year from query
