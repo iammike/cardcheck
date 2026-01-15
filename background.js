@@ -2,7 +2,7 @@
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'searchPriceCharting') {
-    searchPriceCharting(request.query)
+    searchPriceCharting(request.query, false, request.isSportsCard)
       .then(results => sendResponse(results))
       .catch(err => {
         console.error('Search error:', err);
@@ -22,10 +22,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-async function searchPriceCharting(query, isRetry = false) {
-  // Use PriceCharting.com for all card types (sports, Marvel, Pokemon, etc.)
-  const searchUrl = `https://www.pricecharting.com/search-products?q=${encodeURIComponent(query)}&type=prices`;
-  console.log('Searching URL:', searchUrl);
+async function searchPriceCharting(query, isRetry = false, isSportsCard = true) {
+  // Route to appropriate site:
+  // - SportsCardsPro for sports cards (baseball, football, basketball, hockey, soccer)
+  // - PriceCharting for non-sports (Marvel, Pokemon, Magic, etc.)
+  const baseUrl = isSportsCard
+    ? 'https://www.sportscardspro.com'
+    : 'https://www.pricecharting.com';
+  const searchUrl = `${baseUrl}/search-products?q=${encodeURIComponent(query)}&type=prices`;
+  console.log('Searching URL:', searchUrl, '(isSportsCard:', isSportsCard, ')');
 
   const response = await fetch(searchUrl);
   const finalUrl = response.url; // Check if we were redirected
@@ -122,7 +127,8 @@ function parseSearchResults(html, query = '') {
   const flatHtml = html.replace(/\n/g, ' ').replace(/\s+/g, ' ');
 
   // Pattern to capture card link, name, and the console/set info that follows
-  const cardPattern = /<td class="title">\s*<a\s+href="(https:\/\/www\.pricecharting\.com\/game\/[^"]+)"[^>]*>\s*([^<]+)<\/a>[\s\S]*?<div class="console-in-title">\s*<a[^>]*>\s*([^<]+)<\/a>/gi;
+  // Matches both sportscardspro.com and pricecharting.com URLs
+  const cardPattern = /<td class="title">\s*<a\s+href="(https:\/\/www\.(?:sportscardspro|pricecharting)\.com\/game\/[^"]+)"[^>]*>\s*([^<]+)<\/a>[\s\S]*?<div class="console-in-title">\s*<a[^>]*>\s*([^<]+)<\/a>/gi;
 
   let match;
   while ((match = cardPattern.exec(flatHtml)) !== null) {

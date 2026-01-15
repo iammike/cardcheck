@@ -107,7 +107,8 @@ async function searchWithoutVariant() {
     const fallbackQuery = buildSearchQuery(currentCardData, false);
     const response = await chrome.runtime.sendMessage({
       action: 'searchPriceCharting',
-      query: fallbackQuery
+      query: fallbackQuery,
+      isSportsCard: isSportsCard(currentCardData)
     });
 
     let results;
@@ -186,11 +187,13 @@ elements.searchBtn.addEventListener('click', async () => {
 
   try {
     const query = buildSearchQuery(currentCardData);
+    const sportsCard = isSportsCard(currentCardData);
     console.log('Card data:', currentCardData);
-    console.log('Search query:', query);
+    console.log('Search query:', query, 'isSportsCard:', sportsCard);
     let response = await chrome.runtime.sendMessage({
       action: 'searchPriceCharting',
-      query: query
+      query: query,
+      isSportsCard: sportsCard
     });
     console.log('Search response:', response);
 
@@ -214,7 +217,8 @@ elements.searchBtn.addEventListener('click', async () => {
       const fallbackQuery = buildSearchQuery(currentCardData, false);
       response = await chrome.runtime.sendMessage({
         action: 'searchPriceCharting',
-        query: fallbackQuery
+        query: fallbackQuery,
+        isSportsCard: sportsCard
       });
 
       if (Array.isArray(response)) {
@@ -231,7 +235,8 @@ elements.searchBtn.addEventListener('click', async () => {
       console.log('Fallback query (no number):', fallbackQuery);
       response = await chrome.runtime.sendMessage({
         action: 'searchPriceCharting',
-        query: fallbackQuery
+        query: fallbackQuery,
+        isSportsCard: sportsCard
       });
       console.log('Fallback response:', response);
 
@@ -277,7 +282,8 @@ async function tryExactMatchWithPrices(card) {
     const fallbackQuery = buildSearchQuery(currentCardData, false);
     const response = await chrome.runtime.sendMessage({
       action: 'searchPriceCharting',
-      query: fallbackQuery
+      query: fallbackQuery,
+      isSportsCard: isSportsCard(currentCardData)
     });
 
     let results;
@@ -321,6 +327,21 @@ function buildSearchQuery(data, includeVariant = true, includeNumber = true) {
 
 function hasVariantData(data) {
   return !!(data.parallel || data.insertSet);
+}
+
+function isSportsCard(data) {
+  // Check if "sport" field exists and has a common sports value
+  if (data.sport) {
+    const sportLower = data.sport.toLowerCase();
+    const sports = ['baseball', 'football', 'basketball', 'hockey', 'soccer', 'golf', 'tennis', 'boxing', 'wrestling', 'racing', 'mma', 'ufc'];
+    return sports.some(s => sportLower.includes(s));
+  }
+  // If no sport field, check if team field exists (usually indicates sports card)
+  if (data.team) {
+    return true;
+  }
+  // Default to sports card (more common on eBay)
+  return true;
 }
 
 function displaySearchResults(results, showingVariants = false, exactMatchName = null) {
