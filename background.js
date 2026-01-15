@@ -72,9 +72,12 @@ function parseSearchResults(html, query = '') {
     'national', 'treasures', 'immaculate', 'spectra', 'obsidian', 'origins', 'phoenix',
     'certified', 'limited', 'playoff', 'classics', 'legacy', 'clearly', 'stadium', 'club',
     // Parallels/variants
-    'refractor', 'parallel', 'auto', 'autograph', 'rookie', 'base', 'insert', 'gold', 'silver',
-    'bronze', 'red', 'blue', 'green', 'orange', 'purple', 'pink', 'black', 'white', 'aqua',
-    'shimmer', 'holo', 'holographic', 'foil', 'prism',
+    'refractor', 'parallel', 'auto', 'autograph', 'autographs', 'signature', 'signatures',
+    'rookie', 'base', 'insert', 'gold', 'silver', 'bronze', 'platinum', 'diamond',
+    'red', 'blue', 'green', 'orange', 'purple', 'pink', 'black', 'white', 'aqua', 'yellow',
+    'shimmer', 'holo', 'holographic', 'foil', 'prism', 'prizm', 'mojo', 'speckle',
+    'wave', 'camo', 'tie-dye', 'snakeskin', 'scope', 'hyper', 'neon', 'laser',
+    'portrait', 'luminance',
     // Sports
     'football', 'basketball', 'baseball', 'hockey', 'soccer',
     // Non-sports categories (from PriceCharting)
