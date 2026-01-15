@@ -23,8 +23,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 async function searchPriceCharting(query, isRetry = false) {
-  // Use SportsCardsPro for sports cards (same company as PriceCharting)
-  const searchUrl = `https://www.sportscardspro.com/search-products?q=${encodeURIComponent(query)}&type=prices`;
+  // Use PriceCharting.com for all card types (sports, Marvel, Pokemon, etc.)
+  const searchUrl = `https://www.pricecharting.com/search-products?q=${encodeURIComponent(query)}&type=prices`;
   console.log('Searching URL:', searchUrl);
 
   const response = await fetch(searchUrl);
@@ -111,7 +111,7 @@ function parseSearchResults(html, query = '') {
   const flatHtml = html.replace(/\n/g, ' ').replace(/\s+/g, ' ');
 
   // Pattern to capture card link, name, and the console/set info that follows
-  const cardPattern = /<td class="title">\s*<a\s+href="(https:\/\/www\.sportscardspro\.com\/game\/[^"]+)"[^>]*>\s*([^<]+)<\/a>[\s\S]*?<div class="console-in-title">\s*<a[^>]*>\s*([^<]+)<\/a>/gi;
+  const cardPattern = /<td class="title">\s*<a\s+href="(https:\/\/www\.pricecharting\.com\/game\/[^"]+)"[^>]*>\s*([^<]+)<\/a>[\s\S]*?<div class="console-in-title">\s*<a[^>]*>\s*([^<]+)<\/a>/gi;
 
   let match;
   while ((match = cardPattern.exec(flatHtml)) !== null) {

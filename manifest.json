@@ -2,14 +2,13 @@
   "manifest_version": 3,
   "name": "CardChecking",
   "version": "1.0.0",
-  "description": "Check trading card prices from PriceCharting/SportsCardsPro while browsing eBay listings",
+  "description": "Check trading card prices from PriceCharting while browsing eBay listings",
   "permissions": [
     "activeTab"
   ],
   "host_permissions": [
     "https://www.ebay.com/*",
-    "https://www.pricecharting.com/*",
-    "https://www.sportscardspro.com/*"
+    "https://www.pricecharting.com/*"
   ],
   "icons": {
     "16": "icons/icon-16.png",
