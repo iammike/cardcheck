@@ -175,6 +175,10 @@ function displayCardInfo(data) {
   elements.cardFeatures.textContent = data.features ? `Features: ${data.features}` : '';
   elements.cardError.textContent = data.error ? (data.error === 'Error' ? 'Note: Error Card' : `Error: ${data.error}`) : '';
   elements.cardGrade.textContent = data.grader && data.grade ? `Grade: ${data.grader} ${data.grade}` : (data.grade ? `Grade: ${data.grade}` : '');
+
+  // Update button text based on card type
+  elements.searchBtn.textContent = isSportsCard(data) ? 'Search SportsCardsPro' : 'Search PriceCharting';
+
   showSection('cardInfo');
 }
 
@@ -258,7 +262,7 @@ elements.searchBtn.addEventListener('click', async () => {
     showError('Failed to search PriceCharting.');
   } finally {
     elements.searchBtn.disabled = false;
-    elements.searchBtn.textContent = 'Search PriceCharting';
+    elements.searchBtn.textContent = sportsCard ? 'Search SportsCardsPro' : 'Search PriceCharting';
   }
 });
 
@@ -336,9 +340,17 @@ function isSportsCard(data) {
     const sports = ['baseball', 'football', 'basketball', 'hockey', 'soccer', 'golf', 'tennis', 'boxing', 'wrestling', 'racing', 'mma', 'ufc'];
     return sports.some(s => sportLower.includes(s));
   }
-  // If no sport field, check if team field exists (usually indicates sports card)
+  // If team field exists, it's likely a sports card
   if (data.team) {
     return true;
+  }
+  // Check if set/manufacturer suggests non-sports
+  const nonSportsKeywords = ['marvel', 'pokemon', 'magic', 'yugioh', 'digimon', 'dragon ball', 'garbage pail', 'lorcana', 'one piece', 'star wars', 'disney', 'dc comics'];
+  const setLower = (data.set || '').toLowerCase();
+  const mfgLower = (data.manufacturer || '').toLowerCase();
+  const titleLower = (data.title || '').toLowerCase();
+  if (nonSportsKeywords.some(kw => setLower.includes(kw) || mfgLower.includes(kw) || titleLower.includes(kw))) {
+    return false;
   }
   // Default to sports card (more common on eBay)
   return true;
