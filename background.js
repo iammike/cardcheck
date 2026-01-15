@@ -72,10 +72,12 @@ function parseSearchResults(html, query = '') {
     'shimmer', 'holo', 'holographic', 'foil', 'prism',
     // Sports
     'football', 'basketball', 'baseball', 'hockey', 'soccer',
-    // Non-sports categories
-    'marvel', 'dc', 'pokemon', 'magic', 'yugioh', 'disney', 'star', 'wars', 'trek',
-    'anime', 'manga', 'gaming', 'entertainment', 'movie', 'film', 'television', 'tv',
-    'universe', 'annual', 'series'
+    // Non-sports categories (from PriceCharting)
+    'pokemon', 'amiibo', 'digimon', 'dragon', 'ball', 'garbage', 'pail', 'lorcana',
+    'marvel', 'magic', 'one', 'piece', 'star', 'wars', 'yugioh',
+    // Additional non-sports
+    'dc', 'disney', 'trek', 'anime', 'manga', 'gaming', 'entertainment',
+    'movie', 'film', 'television', 'tv', 'universe', 'annual', 'series', 'cards'
   ];
 
   // Extract player name, card number, and year from query
