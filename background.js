@@ -192,7 +192,7 @@ function parseSearchResults(html, query = '') {
   });
 
   console.log('Results after dedup:', unique.length);
-  return unique.slice(0, 10);
+  return unique.slice(0, 25);
 }
 
 async function getCardPrices(url) {
