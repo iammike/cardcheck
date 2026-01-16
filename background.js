@@ -2,7 +2,7 @@
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'searchPriceCharting') {
-    searchPriceCharting(request.query)
+    searchPriceCharting(request.query, false, request.isSportsCard)
       .then(results => sendResponse(results))
       .catch(err => {
         console.error('Search error:', err);
@@ -22,10 +22,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-async function searchPriceCharting(query, isRetry = false) {
-  // Use SportsCardsPro for sports cards (same company as PriceCharting)
-  const searchUrl = `https://www.sportscardspro.com/search-products?q=${encodeURIComponent(query)}&type=prices`;
-  console.log('Searching URL:', searchUrl);
+async function searchPriceCharting(query, isRetry = false, isSportsCard = true) {
+  // Route to appropriate site:
+  // - SportsCardsPro for sports cards (baseball, football, basketball, hockey, soccer)
+  // - PriceCharting for non-sports (Marvel, Pokemon, Magic, etc.)
+  const baseUrl = isSportsCard
+    ? 'https://www.sportscardspro.com'
+    : 'https://www.pricecharting.com';
+  const searchUrl = `${baseUrl}/search-products?q=${encodeURIComponent(query)}&type=prices`;
+  console.log('Searching URL:', searchUrl, '(isSportsCard:', isSportsCard, ')');
 
   const response = await fetch(searchUrl);
   const finalUrl = response.url; // Check if we were redirected
@@ -60,13 +65,41 @@ function parseSearchResults(html, query = '') {
 
   // Brand/set keywords to exclude from player name matching
   const brandKeywords = [
+    // Card manufacturers
     'topps', 'panini', 'upper', 'deck', 'bowman', 'fleer', 'donruss', 'score', 'leaf',
+    // Set types
     'chrome', 'prizm', 'select', 'mosaic', 'optic', 'absolute', 'prestige', 'contenders',
     'national', 'treasures', 'immaculate', 'spectra', 'obsidian', 'origins', 'phoenix',
     'certified', 'limited', 'playoff', 'classics', 'legacy', 'clearly', 'stadium', 'club',
-    'refractor', 'parallel', 'auto', 'autograph', 'rookie', 'base', 'insert', 'gold', 'silver',
-    'bronze', 'red', 'blue', 'green', 'orange', 'purple', 'pink', 'black', 'white', 'aqua',
-    'football', 'basketball', 'baseball', 'hockey', 'soccer'
+    // Parallels/variants (avoid single colors - they're often part of card names like "Black Lotus")
+    'refractor', 'parallel', 'auto', 'autograph', 'autographs', 'signature', 'signatures',
+    'rookie', 'base', 'insert', 'gold', 'silver', 'bronze', 'platinum', 'diamond',
+    'shimmer', 'holo', 'holographic', 'foil', 'prism', 'prizm', 'mojo', 'speckle',
+    'wave', 'camo', 'tie-dye', 'snakeskin', 'scope', 'hyper', 'neon', 'laser',
+    'portrait', 'luminance',
+    // Sports
+    'football', 'basketball', 'baseball', 'hockey', 'soccer',
+    // Soccer/International leagues and terms
+    'uefa', 'fifa', 'champions', 'league', 'premier', 'bundesliga', 'serie', 'liga',
+    'competitions', 'club', 'match', 'attax', 'finest', 'merlin', 'stadium',
+    // Non-sports categories (from PriceCharting)
+    'pokemon', 'amiibo', 'digimon', 'dragon', 'ball', 'garbage', 'pail', 'lorcana',
+    'marvel', 'magic', 'one', 'piece', 'star', 'wars', 'yugioh',
+    // Pokemon sets
+    'fossil', 'jungle', 'rocket', 'gym', 'heroes', 'challenge', 'neo', 'genesis',
+    'discovery', 'revelation', 'destiny', 'legendary', 'expedition', 'aquapolis', 'skyridge',
+    // Magic: The Gathering specific
+    'gathering', 'unlimited', 'alpha', 'beta', 'revised', 'legends', 'antiquities',
+    'arabian', 'nights', 'homelands', 'alliances', 'mirage', 'visions', 'weatherlight',
+    // Disney Lorcana sets
+    'first', 'chapter', 'rise', 'floodborn', 'into', 'inklands', 'ursula', 'return',
+    'shimmering', 'skies', 'azurite', 'sea',
+    // Common set name words and editions
+    'the', 'edition', 'set', 'tcg', 'ccg', 'vol', 'volume', 'part', 'book',
+    '1st', '2nd', '3rd',
+    // Additional non-sports
+    'dc', 'disney', 'trek', 'anime', 'manga', 'gaming', 'entertainment',
+    'movie', 'film', 'television', 'tv', 'universe', 'annual', 'series', 'cards'
   ];
 
   // Extract player name, card number, and year from query
@@ -77,20 +110,43 @@ function parseSearchResults(html, query = '') {
   let queryYear = null;
 
   for (const word of queryWords) {
+    // Skip standalone punctuation (e.g., "-" from "Genie - On The Job")
+    if (/^[^\w]+$/.test(word)) {
+      continue;
+    }
+
     // Check for year (4 digit numbers starting with 19 or 20)
     if (/^(19|20)\d{2}$/.test(word)) {
       queryYear = word;
       continue;
     }
 
+    // Check for year range (e.g., 2024-25, 2023-24) - skip these, they're part of set names
+    if (/^(19|20)\d{2}-\d{2}$/.test(word)) {
+      continue;
+    }
+
     // Check for card number patterns:
     // - Numeric with optional # prefix (e.g., #186, 336)
-    // - Alphanumeric with hyphen (e.g., LIOA-JW, RC-25)
+    // - Numeric with slash (e.g., 10/62, 4/102) - common in Pokemon/TCG
+    // - Alphanumeric with hyphen (e.g., LIOA-JW, RC-25, LOB-001)
+    // - Alphanumeric without hyphen (e.g., EN004, BT01) - letters followed by numbers
     if (/^#?\d+$/.test(word)) {
       queryCardNumber = word.replace(/^#/, '');
       continue;
     }
-    if (/^[a-z0-9]+-[a-z0-9]+$/i.test(word)) {
+    if (/^\d+\/\d+$/.test(word)) {
+      // Extract just the card number before the slash (10/62 -> 10)
+      queryCardNumber = word.split('/')[0];
+      continue;
+    }
+    if (/^(?=.*\d)[a-z0-9]+-[a-z0-9]+$/i.test(word)) {
+      // Hyphenated with at least one digit (LOB-001, RC-25) - not pure letters like BLUE-EYES
+      queryCardNumber = word;
+      continue;
+    }
+    if (/^[a-z]{1,4}\d{2,4}$/i.test(word)) {
+      // Letters followed by numbers (EN004, BT01, OP01)
       queryCardNumber = word;
       continue;
     }
@@ -111,7 +167,8 @@ function parseSearchResults(html, query = '') {
   const flatHtml = html.replace(/\n/g, ' ').replace(/\s+/g, ' ');
 
   // Pattern to capture card link, name, and the console/set info that follows
-  const cardPattern = /<td class="title">\s*<a\s+href="(https:\/\/www\.sportscardspro\.com\/game\/[^"]+)"[^>]*>\s*([^<]+)<\/a>[\s\S]*?<div class="console-in-title">\s*<a[^>]*>\s*([^<]+)<\/a>/gi;
+  // Matches both sportscardspro.com and pricecharting.com URLs
+  const cardPattern = /<td class="title">\s*<a\s+href="(https:\/\/www\.(?:sportscardspro|pricecharting)\.com\/game\/[^"]+)"[^>]*>\s*([^<]+)<\/a>[\s\S]*?<div class="console-in-title">\s*<a[^>]*>\s*([^<]+)<\/a>/gi;
 
   let match;
   while ((match = cardPattern.exec(flatHtml)) !== null) {
@@ -131,20 +188,30 @@ function parseSearchResults(html, query = '') {
 
       // Filter by card number if we have one
       if (queryCardNumber) {
-        // Match numeric (#123) or alphanumeric (#LIOA-JW, [LIOA-JW])
-        const resultNumMatch = name.match(/#([a-z0-9-]+)/i) || name.match(/\[([a-z0-9-]+)\]/i);
+        // Match various card number formats in result names
+        const resultNumMatch = name.match(/#([a-z0-9-]+)/i) ||           // #LOB-001, #123
+                               name.match(/\[([a-z0-9-]+)\]/i) ||        // [LOB-001]
+                               name.match(/\b(\d+)\/\d+\b/) ||           // 10/62
+                               name.match(/\b([a-z]{1,4}\d{2,4})\b/i) || // EN004, BT01
+                               name.match(/\b([a-z]{2,4}-\d{2,4})\b/i);  // LOB-001, SDK-001
         const resultNum = resultNumMatch ? resultNumMatch[1].toLowerCase() : null;
-        if (!resultNum || resultNum !== queryCardNumber.toLowerCase()) {
-          continue; // Skip - wrong card number
+        // Only skip if result has a DIFFERENT card number (not if it has none)
+        if (resultNum && resultNum !== queryCardNumber.toLowerCase()) {
+          continue; // Skip - result has different card number
         }
         // Card number matched - also check year if we have one
         if (queryYear && !fullText.includes(queryYear)) {
           continue; // Skip - wrong year
         }
       } else {
-        // No card number - filter by player name
-        if (playerName && !nameLowerForMatch.includes(playerName)) {
-          continue; // Skip - doesn't match player name
+        // No card number - filter by player name (check first word is present)
+        if (playerName) {
+          const playerWords = playerName.split(' ').filter(w => w.length > 1);
+          // Only require the first word to match (main name like "Genie", "Lapras", etc.)
+          const firstWord = playerWords[0];
+          if (firstWord && !nameLowerForMatch.includes(firstWord)) {
+            continue; // Skip - doesn't match player name
+          }
         }
       }
 
@@ -181,7 +248,7 @@ function parseSearchResults(html, query = '') {
   });
 
   console.log('Results after dedup:', unique.length);
-  return unique.slice(0, 10);
+  return unique.slice(0, 50);
 }
 
 async function getCardPrices(url) {
