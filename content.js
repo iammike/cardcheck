@@ -27,6 +27,7 @@ function extractCardData() {
     sport: null,
     team: null,
     manufacturer: null,
+    game: null,
     insertSet: null,
     parallel: null,
     features: null,
@@ -89,6 +90,14 @@ function extractCardData() {
     Object.assign(data, parsed);
   }
 
+  // Even if we have a name, parse title to fill in missing year/set/number
+  if (data.title && (!data.year || !data.set || !data.number)) {
+    const parsed = parseTitle(data.title);
+    if (!data.year && parsed.year) data.year = parsed.year;
+    if (!data.set && parsed.set) data.set = parsed.set;
+    if (!data.number && parsed.number) data.number = parsed.number;
+  }
+
   // Check title for error card indication (even if we have structured data)
   if (!data.error && data.title) {
     const titleLower = data.title.toLowerCase();
@@ -116,23 +125,45 @@ function extractCardData() {
 }
 
 function mapSpecificToData(label, value, data) {
-  // Player name - prioritize player/athlete fields over card name
+  // Name priority: player/athlete > card name > character
   // Skip generic placeholders like "Multi", "Various", "N/A"
   const invalidPlayerNames = ['multi', 'various', 'n/a', 'multiple', 'see description', 'assorted'];
   if (label === 'player/athlete' || label === 'player' || label === 'athlete') {
+    // Highest priority - real person's name (sports cards)
     if (!invalidPlayerNames.includes(value.toLowerCase())) {
-      data.name = value; // Use player field if it's a real name
+      data.name = value;
+      data._nameSource = 'player'; // Track source for priority
     }
   }
-  else if (label === 'card name' || label === 'character') {
-    // Only use card name if we don't already have a player name
-    if (!data.name && !invalidPlayerNames.includes(value.toLowerCase())) {
-      data.name = value;
+  else if (label === 'card name') {
+    // Medium priority - overwrites character but not player/athlete
+    if (!invalidPlayerNames.includes(value.toLowerCase())) {
+      if (data._nameSource !== 'player') {
+        data.name = value;
+        data._nameSource = 'cardname';
+      }
+    }
+  }
+  else if (label === 'character') {
+    // Lowest priority - only use if nothing better
+    if (!invalidPlayerNames.includes(value.toLowerCase())) {
+      if (!data._nameSource) {
+        data.name = value;
+        data._nameSource = 'character';
+      }
     }
   }
   // Set - but not "insert set"
-  else if ((label === 'set' || label === 'product') && !label.includes('insert')) {
+  else if (label === 'set' && !label.includes('insert')) {
     data.set = value;
+  }
+  // Product as fallback for set (only if we don't have a set yet)
+  else if (label === 'product' && !data.set) {
+    // Skip generic product types that aren't real set names
+    const invalidProducts = ['single', 'single - insert', 'insert', 'box', 'pack', 'case'];
+    if (!invalidProducts.includes(value.toLowerCase())) {
+      data.set = value;
+    }
   }
   // Insert Set (e.g., "Rookie Ticket")
   else if (label === 'insert set' || label.includes('insert')) {
@@ -149,12 +180,25 @@ function mapSpecificToData(label, value, data) {
       data.parallel = value;
     }
   }
-  // Year
-  else if (label === 'year manufactured' || label === 'season' || label === 'year') {
+  // Year - priority: year manufactured > season > year
+  else if (label === 'year manufactured') {
     data.year = value;
+    data._yearSource = 'manufactured';
   }
-  // Grading company (check this first before grade)
-  else if (label.includes('grader') || label.includes('professional grader') || label.includes('certif')) {
+  else if (label === 'season') {
+    if (data._yearSource !== 'manufactured') {
+      data.year = value;
+      data._yearSource = 'season';
+    }
+  }
+  else if (label === 'year') {
+    if (!data._yearSource) {
+      data.year = value;
+      data._yearSource = 'year';
+    }
+  }
+  // Grading company (check this first before grade, but NOT certification number)
+  else if ((label.includes('grader') || label === 'professional grader') && !label.includes('certification')) {
     // Extract abbreviation from full name like "Beckett Grading Services (BGS)" or "Professional Sports Authenticator (PSA)"
     const abbrevMatch = value.match(/\((PSA|BGS|CGC|SGC|TAG|CSG|HGA|AGS|GMA|KSA)\)/i);
     if (abbrevMatch) {
@@ -201,6 +245,10 @@ function mapSpecificToData(label, value, data) {
   else if (label === 'manufacturer') {
     data.manufacturer = value;
   }
+  // Game (e.g., "Pokémon TCG", "Magic: The Gathering")
+  else if (label === 'game') {
+    data.game = value;
+  }
   // Features (Rookie, Short Print, Autograph, Error, etc.)
   else if (label === 'features') {
     data.features = value;
@@ -234,6 +282,8 @@ function parseTitle(title) {
   const result = {
     name: null,
     set: null,
+    year: null,
+    number: null,
     grade: null,
     grader: null
   };
@@ -243,44 +293,85 @@ function parseTitle(title) {
     .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // Remove emojis
     .replace(/\b(rare|invest|hot|fire|gem|mint|look|wow|must|see|read|nice|great|beautiful|gorgeous|stunning|pristine|perfect|excellent|amazing|incredible|awesome)\b/gi, '')
     .replace(/[🔥💎⭐️✨🌟💯🏆]/g, '')
+    .replace(/\*+\d*\s*$/, '') // Remove trailing seller codes like **277
     .trim();
 
   // Try to extract PSA/BGS/CGC grade
-  const gradeMatch = cleaned.match(/\b(PSA|BGS|CGC|SGC)\s*(\d+\.?\d*)/i);
+  const gradeMatch = cleaned.match(/\b(PSA|BGS|CGC|SGC|TAG|CSG|HGA|AGS|GMA|KSA)\s*(\d+\.?\d*)/i);
   if (gradeMatch) {
     result.grader = gradeMatch[1].toUpperCase();
     result.grade = gradeMatch[2];
   }
 
-  // Try to extract card number (e.g., "4/102", "#4", "No. 4")
-  const numberMatch = cleaned.match(/(?:#|No\.?\s*)?(\d+)(?:\/\d+)?/);
+  // Extract year (4 digit number starting with 19 or 20, optionally with -YY suffix like 2025-26)
+  const yearMatch = cleaned.match(/\b(19\d{2}|20\d{2})(?:-\d{2})?\b/);
+  if (yearMatch) {
+    // Extract just the 4-digit year
+    result.year = yearMatch[1];
+  }
 
-  // Try to identify common set names
+  // Extract card number (#777, #1, #TT-11, #LOB-001, #FSA-FC, No. 4, XXX/YYY format, etc.)
+  const numberMatch = cleaned.match(/(?:#|No\.?\s*)([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)(?:\/\d+)?/);
+  if (numberMatch) {
+    result.number = numberMatch[1];
+  } else {
+    // Try standalone XXX/YYY format (e.g., "081/199" print run format)
+    const slashMatch = cleaned.match(/\b(\d{2,4})\/\d+\b/);
+    if (slashMatch) {
+      result.number = slashMatch[1];
+    }
+  }
+
+  // Try to extract quoted card name first (e.g., "JEDI A LA KUROSAWA")
+  const quotedMatch = cleaned.match(/"([^"]+)"/);
+  if (quotedMatch) {
+    result.name = quotedMatch[1];
+  }
+
+  // Build set name from recognized components
+  const setComponents = [];
   const setPatterns = [
     /\b(base set|jungle|fossil|team rocket|gym heroes|gym challenge|neo genesis|neo discovery|neo revelation|neo destiny)\b/i,
     /\b(1st edition|first edition|unlimited|shadowless)\b/i,
     /\b(topps|upper deck|fleer|donruss|panini|bowman|prizm|select|mosaic|optic)\b/i,
-    /\b(\d{4})\b/ // Year as possible set indicator
+    /\b(star wars|pokemon|magic|yu-?gi-?oh|one piece|digimon|garbage pail)\b/i,
+    /\b(galaxy|chrome|prizm|select|mosaic)\s*(\d+)?\b/i
   ];
 
   for (const pattern of setPatterns) {
     const match = cleaned.match(pattern);
     if (match) {
-      result.set = result.set ? result.set + ' ' + match[1] : match[1];
+      setComponents.push(match[0]);
     }
   }
+  if (setComponents.length > 0) {
+    result.set = setComponents.join(' ');
+  }
 
-  // The remaining text after removing grade info is likely the card name
-  let namePart = cleaned
-    .replace(/\b(PSA|BGS|CGC|SGC)\s*\d+\.?\d*/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  // If no quoted name, try to extract name from what's left
+  if (!result.name) {
+    // First, try to find name after the card number (common pattern: "... #123 Player Name /99")
+    // Note: [a-zA-Z']+ handles names like O'Neal, McDonald where uppercase follows apostrophe
+    const afterNumberMatch = cleaned.match(/#[A-Za-z0-9-]+\s+([A-Z][a-z]+(?:\s+[A-Z][a-zA-Z']+)+)(?:\s+\/\d+)?/);
+    if (afterNumberMatch) {
+      result.name = afterNumberMatch[1].trim();
+    } else {
+      let namePart = cleaned
+        .replace(/\b(PSA|BGS|CGC|SGC|TAG|CSG|HGA|AGS|GMA|KSA)\s*\d+\.?\d*/gi, '')
+        .replace(/\b(19\d{2}|20\d{2})(?:-\d{2})?\b/g, '') // Remove year and year ranges
+        .replace(/#[A-Za-z0-9-]+/g, '') // Remove card numbers (including alphanumeric like #TT-11)
+        .replace(/\/\d+\b/g, '') // Remove print runs like /99
+        .replace(/\b(topps|upper deck|fleer|donruss|panini|bowman|star wars|pokemon|magic|galaxy|chrome|refractor|prizm|select|mosaic|optic|holo|foil)\b/gi, '') // Remove set/parallel words
+        .replace(/[,|"]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 
-  // Take the first meaningful part as the name
-  if (namePart.length > 0) {
-    // Try to get just the player/character name (usually at the start)
-    const words = namePart.split(' ').slice(0, 4).join(' ');
-    result.name = words;
+      if (namePart.length > 0) {
+        // Take the remaining meaningful words as the name
+        const words = namePart.split(' ').filter(w => w.length > 1).slice(0, 5).join(' ');
+        result.name = words.replace(/[,.]$/, '');
+      }
+    }
   }
 
   return result;

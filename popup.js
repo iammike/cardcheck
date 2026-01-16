@@ -22,10 +22,12 @@ const elements = {
   priceList: document.getElementById('price-list'),
   pricechartingLink: document.getElementById('pricecharting-link'),
   error: document.getElementById('error'),
-  errorText: document.getElementById('error-text')
+  errorText: document.getElementById('error-text'),
+  reportIssueLink: document.getElementById('report-issue-link')
 };
 
 let currentCardData = null;
+let currentTabUrl = null;
 let lastSearchResults = null;
 let lastShowingVariants = false;
 let lastExactMatchName = null;
@@ -47,7 +49,8 @@ function showError(message) {
 }
 
 function showNoResults() {
-  elements.errorText.textContent = 'No matching cards found on PriceCharting. This card may not be in the database.';
+  const siteName = isSportsCard(currentCardData) ? 'SportsCardsPro' : 'PriceCharting';
+  elements.errorText.textContent = `No matching cards found on ${siteName}. This card may not be in the database.`;
   showSection('error');
 }
 
@@ -97,6 +100,7 @@ function showNoPriceData(card) {
   }
 
   elements.pricechartingLink.href = card.url;
+  elements.pricechartingLink.textContent = isSportsCard(currentCardData) ? 'View on SportsCardsPro' : 'View on PriceCharting';
   showSection('prices');
 }
 
@@ -143,12 +147,16 @@ async function init() {
       return;
     }
 
+    // Store the tab URL for issue reporting
+    currentTabUrl = tab.url;
+
     // Request card data from content script
     const response = await chrome.tabs.sendMessage(tab.id, { action: 'getCardData' });
 
     if (response && response.success) {
       currentCardData = response.data;
       displayCardInfo(currentCardData);
+      updateReportIssueLink();
     } else {
       showError(response?.error || 'Could not extract card details from this listing.');
     }
@@ -253,6 +261,63 @@ elements.searchBtn.addEventListener('click', async () => {
       showingVariants = true;
     }
 
+    // If still no results and we have a card number, try name + number only (no year, no set)
+    if (results.length === 0 && currentCardData.number) {
+      const fallbackQuery = buildSearchQuery(currentCardData, false, true, false, false);
+      console.log('Fallback query (name + number):', fallbackQuery);
+      response = await chrome.runtime.sendMessage({
+        action: 'searchPriceCharting',
+        query: fallbackQuery,
+        isSportsCard: sportsCard
+      });
+      console.log('Fallback response (name + number):', response);
+
+      if (Array.isArray(response)) {
+        results = response;
+      } else {
+        results = response?.results || [];
+      }
+      showingVariants = true;
+    }
+
+    // If still no results, retry with just the card name (no set, no number, no variant)
+    if (results.length === 0 && currentCardData.name) {
+      const fallbackQuery = buildSearchQuery(currentCardData, false, false, true, false);
+      console.log('Fallback query (name only):', fallbackQuery);
+      response = await chrome.runtime.sendMessage({
+        action: 'searchPriceCharting',
+        query: fallbackQuery,
+        isSportsCard: sportsCard
+      });
+      console.log('Fallback response (name only):', response);
+
+      if (Array.isArray(response)) {
+        results = response;
+      } else {
+        results = response?.results || [];
+      }
+      showingVariants = true;
+    }
+
+    // If still no results and we have a year, retry without year (handles year mismatches)
+    if (results.length === 0 && currentCardData.year) {
+      const fallbackQuery = buildSearchQuery(currentCardData, false, false, false, false);
+      console.log('Fallback query (no year):', fallbackQuery);
+      response = await chrome.runtime.sendMessage({
+        action: 'searchPriceCharting',
+        query: fallbackQuery,
+        isSportsCard: sportsCard
+      });
+      console.log('Fallback response (no year):', response);
+
+      if (Array.isArray(response)) {
+        results = response;
+      } else {
+        results = response?.results || [];
+      }
+      showingVariants = true;
+    }
+
     if (results.length > 0) {
       displaySearchResults(results, showingVariants);
     } else {
@@ -309,7 +374,7 @@ async function tryExactMatchWithPrices(card) {
   return { handled: true };
 }
 
-function buildSearchQuery(data, includeVariant = true, includeNumber = true) {
+function buildSearchQuery(data, includeVariant = true, includeNumber = true, includeYear = true, includeSet = true) {
   // Player name, set, card number, and parallel/variant are key identifiers
   // Note: "error" is intentionally not included - too generic and pollutes search results
   const invalidSets = ['single', 'lot', 'set', 'bundle', 'collection'];
@@ -318,35 +383,81 @@ function buildSearchQuery(data, includeVariant = true, includeNumber = true) {
   const parts = [];
   if (data.name) parts.push(data.name);
   // Include year only if set doesn't already contain it
-  if (data.year && !(cleanSet && cleanSet.includes(data.year))) {
+  if (includeYear && data.year && !(cleanSet && cleanSet.includes(data.year))) {
     parts.push(data.year);
   }
-  if (cleanSet) parts.push(cleanSet);
-  if (includeNumber && data.number) parts.push(data.number);
+  if (includeSet && cleanSet) {
+    parts.push(cleanSet);
+  } else if (includeSet && data.manufacturer) {
+    // Use manufacturer as fallback when no set
+    parts.push(data.manufacturer);
+  }
+  if (includeNumber && data.number) {
+    // Format card number for PriceCharting search
+    let num = data.number.replace(/^#/, ''); // Remove existing # if present
+    // For slash format (10/62), extract just the first number
+    if (num.includes('/')) {
+      num = num.split('/')[0];
+    }
+    // Add # prefix for cleaner search matching
+    parts.push('#' + num);
+  }
   if (includeVariant) {
     if (data.parallel) parts.push(data.parallel);
     if (data.insertSet) parts.push(data.insertSet);
+    // Include features (1st Edition, Full Art, Unlimited, etc.) - skip generic terms
+    if (data.features) {
+      const featuresLower = data.features.toLowerCase();
+      const skipFeatures = ['normal', 'standard', 'regular', 'common'];
+      if (!skipFeatures.some(skip => featuresLower === skip)) {
+        parts.push(data.features);
+      }
+    }
   }
   return parts.join(' ').trim();
 }
 
 function hasVariantData(data) {
-  return !!(data.parallel || data.insertSet);
+  if (data.parallel || data.insertSet) return true;
+  // Check for non-generic features
+  if (data.features) {
+    const featuresLower = data.features.toLowerCase();
+    const skipFeatures = ['normal', 'standard', 'regular', 'common'];
+    if (!skipFeatures.some(skip => featuresLower === skip)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function isSportsCard(data) {
   // Check if "sport" field exists and has a common sports value
   if (data.sport) {
     const sportLower = data.sport.toLowerCase();
-    const sports = ['baseball', 'football', 'basketball', 'hockey', 'soccer', 'golf', 'tennis', 'boxing', 'wrestling', 'racing', 'mma', 'ufc'];
-    return sports.some(s => sportLower.includes(s));
+    // Skip garbage values like "Raw", "N/A", etc.
+    const invalidSports = ['raw', 'n/a', 'na', 'none', 'other', 'unspecified'];
+    if (!invalidSports.includes(sportLower)) {
+      const sports = ['baseball', 'football', 'basketball', 'hockey', 'soccer', 'golf', 'tennis', 'boxing', 'wrestling', 'racing', 'mma', 'ufc'];
+      if (sports.some(s => sportLower.includes(s))) {
+        return true;
+      }
+    }
+    // If sport field exists but doesn't match, continue checking other fields
   }
   // If team field exists, it's likely a sports card
   if (data.team) {
     return true;
   }
+  // Check if "game" field indicates a TCG (non-sports)
+  if (data.game) {
+    const gameLower = data.game.toLowerCase();
+    const tcgGames = ['pokemon', 'pokémon', 'magic', 'yugioh', 'yu-gi-oh', 'digimon', 'lorcana', 'one piece', 'flesh and blood', 'metazoo', 'weiss schwarz'];
+    if (tcgGames.some(g => gameLower.includes(g))) {
+      return false;
+    }
+  }
   // Check if set/manufacturer suggests non-sports
-  const nonSportsKeywords = ['marvel', 'pokemon', 'magic', 'yugioh', 'digimon', 'dragon ball', 'garbage pail', 'lorcana', 'one piece', 'star wars', 'disney', 'dc comics'];
+  const nonSportsKeywords = ['marvel', 'pokemon', 'pokémon', 'magic', 'yugioh', 'digimon', 'dragon ball', 'garbage pail', 'lorcana', 'one piece', 'star wars', 'disney', 'dc comics', 'wizards of the coast', 'wizards', 'konami', 'bandai', 'ravensburger'];
   const setLower = (data.set || '').toLowerCase();
   const mfgLower = (data.manufacturer || '').toLowerCase();
   const titleLower = (data.title || '').toLowerCase();
@@ -502,6 +613,7 @@ function displayPrices(prices, card) {
   }
 
   elements.pricechartingLink.href = card.url;
+  elements.pricechartingLink.textContent = isSportsCard(currentCardData) ? 'View on SportsCardsPro' : 'View on PriceCharting';
   showSection('prices');
 }
 
@@ -544,6 +656,67 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+function updateReportIssueLink() {
+  const baseUrl = 'https://github.com/iammike/cardcheck/issues/new';
+
+  // Clean up eBay URL - keep only the base item URL
+  let cleanUrl = currentTabUrl || 'Not available';
+  if (cleanUrl.includes('?')) {
+    cleanUrl = cleanUrl.split('?')[0];
+  }
+
+  // Build issue body with debugging info
+  const lines = [];
+
+  // User input section at the top
+  lines.push('## What went wrong?');
+  lines.push('<!-- Describe the issue here - e.g., "Card not found", "Wrong price shown", "Name extracted incorrectly" -->');
+  lines.push('');
+  lines.push('');
+  lines.push('');
+  lines.push('---');
+  lines.push('*The following is auto-populated debug info - no need to edit below this line.*');
+  lines.push('');
+  lines.push('<details>');
+  lines.push('<summary>Debug Info</summary>');
+  lines.push('');
+  lines.push('**eBay Listing:** ' + cleanUrl);
+  lines.push('');
+  if (currentCardData) {
+    const query = buildSearchQuery(currentCardData);
+    lines.push('**Search Query:** `' + query + '`');
+    lines.push('');
+    lines.push(`**Card Type:** ${isSportsCard(currentCardData) ? 'Sports Card (SportsCardsPro)' : 'Non-Sports (PriceCharting)'}`);
+    lines.push('');
+    lines.push('**Detected Card Data:**');
+    if (currentCardData.name) lines.push(`- Name: ${currentCardData.name}`);
+    if (currentCardData.year) lines.push(`- Year: ${currentCardData.year}`);
+    if (currentCardData.set) lines.push(`- Set: ${currentCardData.set}`);
+    if (currentCardData.number) lines.push(`- Card #: ${currentCardData.number}`);
+    if (currentCardData.parallel) lines.push(`- Parallel: ${currentCardData.parallel}`);
+    if (currentCardData.insertSet) lines.push(`- Insert: ${currentCardData.insertSet}`);
+    if (currentCardData.manufacturer) lines.push(`- Manufacturer: ${currentCardData.manufacturer}`);
+    if (currentCardData.grader) lines.push(`- Grader: ${currentCardData.grader}`);
+    if (currentCardData.grade) lines.push(`- Grade: ${currentCardData.grade}`);
+    if (currentCardData.sport) lines.push(`- Sport: ${currentCardData.sport}`);
+    if (currentCardData.team) lines.push(`- Team: ${currentCardData.team}`);
+    if (currentCardData.features) lines.push(`- Features: ${currentCardData.features}`);
+    if (currentCardData.error) lines.push(`- Error: ${currentCardData.error}`);
+  } else {
+    lines.push('No card data extracted');
+  }
+  lines.push('');
+  lines.push('</details>');
+
+  const body = lines.join('\n');
+  const title = currentCardData?.name
+    ? `Card not detected correctly: ${currentCardData.name}`
+    : 'Card not detected correctly';
+
+  const url = `${baseUrl}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=bug`;
+  elements.reportIssueLink.href = url;
 }
 
 // Start
