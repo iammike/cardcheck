@@ -1,37 +1,38 @@
 # PriceChecking
 
-A Chrome extension that helps collectors check prices while browsing eBay listings. Supports sports cards, trading card games (TCGs), comics, and other collectibles.
+A Chrome extension that helps collectors check prices while browsing eBay listings. Supports sports cards, trading card games (TCGs), comic books, and other collectibles.
 
 ## Screenshots
 
-**Detected Card & Price Lookup**
-![Detected card view](screenshots/detected-card.png)
+**Detected Item & Price Lookup**
+![Detected item view](screenshots/detected-card.png)
 
 **Price Comparison by Grade**
 ![Price view](screenshots/price-view.png)
 
 **Multiple Match Selection**
-![Select card view](screenshots/select-card.png)
+![Select item view](screenshots/select-card.png)
 
 ## Features
 
-- **Automatic card detection** - Extracts card name, year, set, card number, and grade from eBay Item Specifics
+- **Automatic detection** - Extracts name, year, set/series, number, and grade from eBay Item Specifics
 - **Real-time pricing** - Fetches current market prices from SportsCardsPro and PriceCharting
-- **Smart routing** - Sports cards go to SportsCardsPro, TCGs and non-sport cards go to PriceCharting
-- **Grade matching** - Highlights the price for your card's specific grade
+- **Smart routing** - Sports cards go to SportsCardsPro; TCGs, comics, and non-sport items go to PriceCharting
+- **Grade matching** - Highlights the price for your item's specific grade
 - **Multi-grader support** - Works with PSA, BGS, SGC, CGC, CBCS, PGX, and more
 
-### Supported Card Types
+### What's Supported
 
 **Sports Cards**
 - Baseball, football, basketball, hockey, soccer, golf, tennis, boxing, wrestling, racing, MMA
 
 **Trading Card Games (TCGs)**
-- Pokémon, Magic: The Gathering, Yu-Gi-Oh!, Digimon, One Piece TCG, Disney Lorcana
+- Pokémon, Magic: The Gathering, Yu-Gi-Oh!, Digimon, One Piece TCG, Disney Lorcana, Weiss Schwarz
 
 **Comic Books**
 - CGC, CBCS, and PGX graded comics
-- All major publishers (Marvel, DC, Image, Dark Horse, and more)
+- All major publishers (Marvel, DC, Image, Dark Horse, IDW, and more)
+- Silver Age through Modern Age
 
 **Non-Sport Collectibles**
 - Star Wars, Marvel, Garbage Pail Kids, and more
@@ -49,29 +50,29 @@ A Chrome extension that helps collectors check prices while browsing eBay listin
 
 ## Usage
 
-1. Navigate to any eBay card listing (sports, TCG, or collectible)
+1. Navigate to any eBay listing (cards, comics, or collectibles)
 2. Click the PriceChecking icon in your toolbar
-3. View detected card info and click the search button
+3. View detected item info and click the search button
 4. Browse prices across all grades
 
 ## How It Works
 
 The extension:
-1. Reads eBay's Item Specifics to extract card metadata (with title parsing as fallback)
-2. Determines the card type (sports, TCG, or non-sport)
+1. Reads eBay's Item Specifics to extract metadata (with title parsing as fallback)
+2. Determines the item type (sports card, TCG, comic, or non-sport)
 3. Routes to the appropriate pricing database:
    - Sports cards → SportsCardsPro
-   - TCGs, comics, and non-sport cards → PriceCharting
+   - TCGs, comics, and non-sport items → PriceCharting
 4. Displays current market prices by grade
 5. Highlights the matching grade for easy comparison
 
-Card not detected correctly? Use the "Report it" link to submit an issue with pre-filled debug info.
+Item not detected correctly? Use the "Report it" link to submit an issue with pre-filled debug info.
 
 ## Privacy
 
 - No personal data is collected or stored
 - No accounts required
-- Card data is only sent to SportsCardsPro or PriceCharting for price lookups
+- Item data is only sent to SportsCardsPro or PriceCharting for price lookups
 
 ## Development
 

@@ -172,7 +172,7 @@ function parseSearchResults(html, query = '') {
 
   let match;
   while ((match = cardPattern.exec(flatHtml)) !== null) {
-    const url = match[1];
+    const url = decodeHtmlEntities(match[1]); // Decode &amp; in URLs like "Past-&-Present"
     const name = decodeHtmlEntities(match[2].trim());
     const setName = decodeHtmlEntities(match[3].trim());
 
@@ -254,7 +254,6 @@ function parseSearchResults(html, query = '') {
 async function getCardPrices(url) {
   const response = await fetch(url);
   const html = await response.text();
-
   return parsePricePage(html, url);
 }
 

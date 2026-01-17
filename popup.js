@@ -479,14 +479,30 @@ function buildSearchQuery(data, includeVariant = true, includeNumber = true, inc
     parts.push('#' + num);
   }
   if (includeVariant) {
-    if (data.parallel) parts.push(data.parallel);
+    // Skip base/standard parallels - they're the default, not a variant
+    if (data.parallel) {
+      const parallelLower = data.parallel.toLowerCase();
+      const skipParallels = ['base', '[base]', 'standard', 'regular', 'common'];
+      if (!skipParallels.some(skip => parallelLower === skip || parallelLower === `[${skip}]`)) {
+        parts.push(data.parallel);
+      }
+    }
     if (data.insertSet) parts.push(data.insertSet);
     // Include features (1st Edition, Full Art, Unlimited, etc.) - skip generic terms
     if (data.features) {
       const featuresLower = data.features.toLowerCase();
-      const skipFeatures = ['normal', 'standard', 'regular', 'common'];
-      if (!skipFeatures.some(skip => featuresLower === skip)) {
-        parts.push(data.features);
+      const skipFeatures = ['normal', 'standard', 'regular', 'common', 'base set'];
+      // Also skip if features only contain "Rookie" + "Base Set" (common combo)
+      const cleanedFeatures = data.features
+        .split(',')
+        .map(f => f.trim())
+        .filter(f => {
+          const fLower = f.toLowerCase();
+          return !skipFeatures.some(skip => fLower === skip);
+        })
+        .join(', ');
+      if (cleanedFeatures && cleanedFeatures.length > 0) {
+        parts.push(cleanedFeatures);
       }
     }
   }

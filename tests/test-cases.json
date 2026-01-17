@@ -1686,6 +1686,66 @@
       "expectedResultName": "Patrick Mahomes",
       "expectedResultCategory": "Prizm",
       "notes": "Minimal/garbage item specifics with 'N/A' values. Relies almost entirely on title parsing. Tests resilience to bad seller data."
+    },
+    {
+      "id": "basketball-damian-lillard-hoops-messy-name",
+      "name": "Basketball - Damian Lillard Hoops 2012 (Messy Card Name)",
+      "category": "sports",
+      "expectedSite": "sportscardspro",
+      "title": "2012 Panini Hoops DAMIAN LILLARD Basketball Card PSA 9 MINT",
+      "itemSpecifics": {
+        "condition": "Graded - PSA 9: Professionally graded",
+        "type": "Sports Trading Card",
+        "sport": "Basketball",
+        "professional grader": "Professional Sports Authenticator (PSA)",
+        "grade": "9",
+        "certification number": "53885460"
+      },
+      "expectedExtraction": {
+        "name": "DAMIAN LILLARD",
+        "year": "2012",
+        "grade": "9",
+        "grader": "PSA",
+        "sport": "Basketball"
+      },
+      "expectedResultName": "Damian Lillard",
+      "expectedResultCategory": "Hoops",
+      "notes": "GitHub Issue #10: Title contains brand 'Hoops' and 'Basketball Card'. Tests cleanCardName strips these from title-parsed names."
+    },
+    {
+      "id": "basketball-damian-lillard-past-present-base",
+      "name": "Basketball - Damian Lillard 2012-13 Past & Present CGC 8",
+      "category": "sports",
+      "expectedSite": "sportscardspro",
+      "itemSpecifics": {
+        "condition": "Graded - CGC 8: Professionally graded",
+        "player/athlete": "Damian Lillard",
+        "year manufactured": "2012",
+        "set": "2012-13 Panini Past & Present",
+        "card number": "249",
+        "parallel/variety": "[Base]",
+        "manufacturer": "Panini",
+        "professional grader": "Certified Guaranty Company (CGC)",
+        "grade": "8",
+        "sport": "Basketball",
+        "team": "Portland Trail Blazers",
+        "features": "Rookie, Base Set"
+      },
+      "expectedExtraction": {
+        "name": "Damian Lillard",
+        "set": "2012-13 Panini Past & Present",
+        "year": "2012",
+        "number": "249",
+        "grade": "8",
+        "grader": "CGC",
+        "sport": "Basketball",
+        "team": "Portland Trail Blazers",
+        "parallel": "[Base]",
+        "manufacturer": "Panini"
+      },
+      "expectedResultName": "Damian Lillard",
+      "expectedResultCategory": "Past & Present",
+      "notes": "GitHub Issue #11: Tests [Base] parallel and 'Base Set' feature being excluded from search query."
     }
   ]
 }
