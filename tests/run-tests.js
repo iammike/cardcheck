@@ -330,7 +330,7 @@ function isSportsCard(data) {
     return false;
   }
   if (data.publisher) {
-    const comicPublishers = ['marvel', 'dc comics', 'dc', 'image', 'dark horse', 'idw', 'boom', 'dynamite', 'valiant', 'archie'];
+    const comicPublishers = ['marvel', 'dc comics', 'dc', 'image', 'dark horse', 'idw', 'boom', 'dynamite', 'valiant', 'archie', 'oni press', 'aftershock', 'scout', 'zenescope', 'ablaze', 'titan'];
     const publisherLower = data.publisher.toLowerCase();
     if (comicPublishers.some(p => publisherLower.includes(p))) return false;
   }
@@ -359,7 +359,7 @@ function isComicBook(data) {
     if (comicOnlyGraders.includes(data.grader.toUpperCase())) return true;
   }
   if (data.publisher) {
-    const comicPublishers = ['marvel', 'dc comics', 'dc', 'image', 'dark horse', 'idw', 'boom', 'dynamite', 'valiant', 'archie'];
+    const comicPublishers = ['marvel', 'dc comics', 'dc', 'image', 'dark horse', 'idw', 'boom', 'dynamite', 'valiant', 'archie', 'oni press', 'aftershock', 'scout', 'zenescope', 'ablaze', 'titan'];
     const publisherLower = data.publisher.toLowerCase();
     if (comicPublishers.some(p => publisherLower.includes(p))) return true;
   }
