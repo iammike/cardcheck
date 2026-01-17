@@ -7,7 +7,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const cardData = extractCardData();
       sendResponse({ success: true, data: cardData });
     } catch (err) {
-      console.error('CardCheck extraction error:', err);
+      console.error('PriceChecking extraction error:', err);
       sendResponse({ success: false, error: err.message });
     }
   }
@@ -33,7 +33,13 @@ function extractCardData() {
     features: null,
     autographed: null,
     error: null,
-    type: null
+    type: null,
+    // Comic book fields
+    publisher: null,
+    era: null,
+    series: null,
+    coverArtist: null,
+    variant: null
   };
 
   // Get the listing title as fallback
@@ -98,6 +104,16 @@ function extractCardData() {
     if (!data.number && parsed.number) data.number = parsed.number;
   }
 
+  // If title has a quoted name and current name came from character field, prefer the quoted name
+  // (e.g., character="R2-D2" but title has "Artoo Detoo on the Rebel Starship")
+  if (data.title && data._nameSource === 'character' && data.title.includes('"')) {
+    const parsed = parseTitle(data.title);
+    if (parsed.name) {
+      data.name = parsed.name;
+      data._nameSource = 'title';
+    }
+  }
+
   // Check title for error card indication (even if we have structured data)
   if (!data.error && data.title) {
     const titleLower = data.title.toLowerCase();
@@ -108,7 +124,8 @@ function extractCardData() {
 
   // Check title for grade if not found in structured data
   if (!data.grade && data.title) {
-    const gradeMatch = data.title.match(/\b(PSA|BGS|CGC|SGC|TAG|CSG|HGA|AGS|GMA|KSA)\s*(\d+\.?\d*)/i);
+    // Match patterns like "CGC 7.0", "CGC Graded 7.0", "PSA Grade 10"
+    const gradeMatch = data.title.match(/\b(PSA|BGS|CGC|SGC|TAG|CSG|HGA|AGS|GMA|KSA|CBCS|PGX)\s*(?:graded?|grade)?\s*(\d+\.?\d*)/i);
     if (gradeMatch) {
       data.grader = gradeMatch[1].toUpperCase();
       data.grade = gradeMatch[2];
@@ -200,20 +217,20 @@ function mapSpecificToData(label, value, data) {
   // Grading company (check this first before grade, but NOT certification number)
   else if ((label.includes('grader') || label === 'professional grader') && !label.includes('certification')) {
     // Extract abbreviation from full name like "Beckett Grading Services (BGS)" or "Professional Sports Authenticator (PSA)"
-    const abbrevMatch = value.match(/\((PSA|BGS|CGC|SGC|TAG|CSG|HGA|AGS|GMA|KSA)\)/i);
+    const abbrevMatch = value.match(/\((PSA|BGS|CGC|SGC|TAG|CSG|HGA|AGS|GMA|KSA|CBCS|PGX)\)/i);
     if (abbrevMatch) {
       data.grader = abbrevMatch[1].toUpperCase();
     } else {
       // Fallback: check if value starts with known abbreviation
-      const startsWithMatch = value.match(/^(PSA|BGS|CGC|SGC|TAG|CSG|HGA|AGS|GMA|KSA)\b/i);
+      const startsWithMatch = value.match(/^(PSA|BGS|CGC|SGC|TAG|CSG|HGA|AGS|GMA|KSA|CBCS|PGX)\b/i);
       data.grader = startsWithMatch ? startsWithMatch[1].toUpperCase() : value;
     }
   }
   // Grade (must not be "grader" or "graded" fields)
   else if (label.includes('grade') && !label.includes('grader') && label !== 'graded') {
-    // Extract just the numeric grade (1-10, possibly with .5)
+    // Extract just the numeric grade (1-10, with decimals like .5, .6, .8)
     // This filters out certification numbers that might get mixed in
-    const gradeNum = value.match(/\b(10|[1-9](?:\.5)?)\b/);
+    const gradeNum = value.match(/\b(10|[1-9](?:\.\d)?)\b/);
     if (gradeNum) {
       data.grade = gradeNum[1];
     } else {
@@ -223,7 +240,7 @@ function mapSpecificToData(label, value, data) {
   // Condition might contain grade info
   else if (label === 'condition') {
     // Check if it looks like a grade (e.g., "PSA 10", "BGS 9.5")
-    const gradeMatch = value.match(/\b(PSA|BGS|CGC|SGC|TAG|CSG|HGA|AGS|GMA|KSA)\s*(\d+\.?\d*)/i);
+    const gradeMatch = value.match(/\b(PSA|BGS|CGC|SGC|TAG|CSG|HGA|AGS|GMA|KSA|CBCS|PGX)\s*(\d+\.?\d*)/i);
     if (gradeMatch) {
       data.grader = gradeMatch[1].toUpperCase();
       data.grade = gradeMatch[2];
@@ -249,13 +266,21 @@ function mapSpecificToData(label, value, data) {
   else if (label === 'game') {
     data.game = value;
   }
-  // Features (Rookie, Short Print, Autograph, Error, etc.)
+  // Features (Rookie, Short Print, Autograph, Error, Variant Cover, etc.)
   else if (label === 'features') {
     data.features = value;
     // Check for error in features
     if (value.toLowerCase().includes('error')) {
       data.error = 'Error';
     }
+    // Check for variant cover (comics)
+    if (value.toLowerCase().includes('variant')) {
+      data.variant = 'Variant Cover';
+    }
+  }
+  // Variant Type (comics - e.g., "Newsstand Variant", "Direct Edition")
+  else if (label === 'variant type') {
+    data.variant = value;
   }
   // Autographed
   else if (label === 'autographed') {
@@ -276,6 +301,31 @@ function mapSpecificToData(label, value, data) {
       data.error = 'Error';
     }
   }
+  // Comic book fields
+  else if (label === 'publisher') {
+    data.publisher = value;
+  }
+  else if (label === 'era') {
+    data.era = value;
+  }
+  else if (label === 'series' || label === 'series title' || label === 'comic series') {
+    data.series = value;
+  }
+  else if (label === 'issue number' || label === 'issue') {
+    // For comics, issue number goes to the number field
+    data.number = value;
+  }
+  // Publication year (comics use this instead of "year manufactured")
+  else if (label === 'publication year') {
+    if (!data._yearSource || data._yearSource !== 'manufactured') {
+      data.year = value;
+      data._yearSource = 'publication';
+    }
+  }
+  // Cover artist (comics)
+  else if (label === 'cover artist') {
+    data.coverArtist = value;
+  }
 }
 
 function parseTitle(title) {
@@ -285,7 +335,10 @@ function parseTitle(title) {
     year: null,
     number: null,
     grade: null,
-    grader: null
+    grader: null,
+    // Comic-specific fields
+    series: null,
+    publisher: null
   };
 
   // Remove common spam words and emojis
@@ -296,11 +349,31 @@ function parseTitle(title) {
     .replace(/\*+\d*\s*$/, '') // Remove trailing seller codes like **277
     .trim();
 
-  // Try to extract PSA/BGS/CGC grade
-  const gradeMatch = cleaned.match(/\b(PSA|BGS|CGC|SGC|TAG|CSG|HGA|AGS|GMA|KSA)\s*(\d+\.?\d*)/i);
+  // Try to extract PSA/BGS/CGC grade - handle "CGC 7.0", "CGC Graded 7.0", etc.
+  const gradeMatch = cleaned.match(/\b(PSA|BGS|CGC|SGC|TAG|CSG|HGA|AGS|GMA|KSA|CBCS|PGX)\s*(?:graded?|grade)?\s*(\d+\.?\d*)/i);
   if (gradeMatch) {
     result.grader = gradeMatch[1].toUpperCase();
     result.grade = gradeMatch[2];
+  }
+
+  // Check for comic indicators and extract series
+  const isLikelyComic = /\b(cgc|cbcs|pgx)\s*\d/i.test(cleaned) ||
+                        /\b(variant|newsstand|direct edition|1st print|first print)\b/i.test(cleaned) ||
+                        /\bvol\.?\s*\d+\s*#/i.test(cleaned);
+
+  if (isLikelyComic) {
+    // Try to extract comic series (text before #number or Vol)
+    // Pattern: "Amazing Spider-Man #129" or "Batman Vol 2 #1"
+    const seriesMatch = cleaned.match(/^([A-Za-z][A-Za-z\s\-:'.]+?)(?:\s+Vol\.?\s*\d+)?\s*#\d+/i);
+    if (seriesMatch) {
+      result.series = seriesMatch[1].trim();
+    }
+
+    // Extract publisher from common publisher names in title
+    const publisherMatch = cleaned.match(/\b(Marvel|DC|Image|Dark Horse|IDW|Boom|Dynamite|Valiant|Archie)\b/i);
+    if (publisherMatch) {
+      result.publisher = publisherMatch[1];
+    }
   }
 
   // Extract year (4 digit number starting with 19 or 20, optionally with -YY suffix like 2025-26)
@@ -357,7 +430,7 @@ function parseTitle(title) {
       result.name = afterNumberMatch[1].trim();
     } else {
       let namePart = cleaned
-        .replace(/\b(PSA|BGS|CGC|SGC|TAG|CSG|HGA|AGS|GMA|KSA)\s*\d+\.?\d*/gi, '')
+        .replace(/\b(PSA|BGS|CGC|SGC|TAG|CSG|HGA|AGS|GMA|KSA|CBCS|PGX)\s*\d+\.?\d*/gi, '')
         .replace(/\b(19\d{2}|20\d{2})(?:-\d{2})?\b/g, '') // Remove year and year ranges
         .replace(/#[A-Za-z0-9-]+/g, '') // Remove card numbers (including alphanumeric like #TT-11)
         .replace(/\/\d+\b/g, '') // Remove print runs like /99
