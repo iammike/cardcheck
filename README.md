@@ -29,20 +29,31 @@ A Chrome extension that helps collectors check prices while browsing eBay listin
 **Trading Card Games (TCGs)**
 - Pokémon, Magic: The Gathering, Yu-Gi-Oh!, Digimon, One Piece TCG, Disney Lorcana, Weiss Schwarz
 
+**Non-Sport Trading Cards**
+- Star Wars, Marvel, Garbage Pail Kids, and more
+
 **Comic Books**
 - CGC, CBCS, and PGX graded comics
 - All major publishers (Marvel, DC, Image, Dark Horse, IDW, and more)
 - Silver Age through Modern Age
 
-**Non-Sport Collectibles**
-- Star Wars, Marvel, Garbage Pail Kids, and more
+**Not Yet Supported**
+- Video games and consoles
+- Amiibo, Funko Pop, and other collectibles
 
 ## Installation
+
+### From GitHub Releases (Recommended)
+1. Download the latest `pricechecking-vX.X.X.zip` from [Releases](https://github.com/iammike/cardcheck/releases)
+2. Unzip the file
+3. Open Chrome and go to `chrome://extensions/`
+4. Enable "Developer mode" (top right)
+5. Click "Load unpacked" and select the unzipped folder
 
 ### From Chrome Web Store
 *(Coming soon)*
 
-### Manual Installation (Developer Mode)
+### From Source (Development)
 1. Clone this repository
 2. Open Chrome and go to `chrome://extensions/`
 3. Enable "Developer mode" (top right)
