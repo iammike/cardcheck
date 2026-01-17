@@ -227,25 +227,25 @@
         "condition": "Graded - PSA 10: Professionally graded",
         "type": "Collectible Card Game",
         "game": "Digimon",
-        "set": "2024 Digimon Pb18-Premium Heroines Set",
+        "set": "Xros Encounter",
         "character": "Venusmon",
         "card name": "Venusmon",
-        "year manufactured": "2024",
-        "card number": "042",
+        "year manufactured": "2022",
+        "card number": "BT10-042",
         "professional grader": "Professional Sports Authenticator (PSA)",
         "grade": "10"
       },
       "expectedExtraction": {
         "name": "Venusmon",
-        "set": "2024 Digimon Pb18-Premium Heroines Set",
-        "year": "2024",
-        "number": "042",
+        "set": "Xros Encounter",
+        "year": "2022",
+        "number": "BT10-042",
         "grade": "10",
         "grader": "PSA",
         "game": "Digimon"
       },
       "expectedResultName": "Venusmon",
-      "expectedResultCategory": "Digimon",
+      "expectedResultCategory": "Digimon Xros Encounter",
       "notes": "Game field 'Digimon' routes to PriceCharting. Card name and character both have same value."
     },
     {
