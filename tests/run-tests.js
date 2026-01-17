@@ -56,7 +56,7 @@ function extractCardData(testCase) {
       // Medium priority - overwrites character but not player/athlete
       if (!invalidNames.includes(value.toLowerCase())) {
         if (data._nameSource !== 'player') {
-          data.name = value;
+          data.name = cleanCardName(value);
           data._nameSource = 'cardname';
         }
       }
@@ -201,7 +201,7 @@ function extractCardData(testCase) {
   // Parse title for missing fields
   if (data.title && (!data.name || !data.year || !data.set || !data.number || !data.grade)) {
     const parsed = parseTitle(data.title);
-    if (!data.name && parsed.name) data.name = parsed.name;
+    if (!data.name && parsed.name) data.name = cleanCardName(parsed.name);
     if (!data.year && parsed.year) data.year = parsed.year;
     if (!data.set && parsed.set) data.set = parsed.set;
     if (!data.number && parsed.number) data.number = parsed.number;
@@ -228,6 +228,30 @@ function extractCardData(testCase) {
   }
 
   return data;
+}
+
+// Clean up card names that contain brand names or card type descriptors
+function cleanCardName(name) {
+  if (!name) return name;
+
+  const brandPatterns = [
+    /\bhoops\b/gi, /\btopps\b/gi, /\bpanini\b/gi, /\bbowman\b/gi,
+    /\bdonruss\b/gi, /\bupper\s*deck\b/gi, /\bfleer\b/gi, /\bprizm\b/gi,
+    /\bselect\b/gi, /\bmosaic\b/gi, /\boptic\b/gi, /\bchrome\b/gi,
+    /\bscore\b/gi, /\bleaf\b/gi, /\bmaxx\b/gi,
+  ];
+
+  const typePatterns = [
+    /\bbasketball\s+card\b/gi, /\bbaseball\s+card\b/gi, /\bfootball\s+card\b/gi,
+    /\bhockey\s+card\b/gi, /\bsoccer\s+card\b/gi, /\bsports\s+card\b/gi,
+    /\btrading\s+card\b/gi, /\brookie\s+card\b/gi,
+  ];
+
+  let cleaned = name;
+  for (const pattern of brandPatterns) cleaned = cleaned.replace(pattern, '');
+  for (const pattern of typePatterns) cleaned = cleaned.replace(pattern, '');
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  return cleaned.length > 0 ? cleaned : name;
 }
 
 // Simplified title parsing (mirrors content.js)
@@ -427,13 +451,24 @@ function buildSearchQuery(data) {
     if (num.includes('/')) num = num.split('/')[0];
     parts.push('#' + num);
   }
-  if (data.parallel) parts.push(data.parallel);
+  // Skip base/standard parallels
+  if (data.parallel) {
+    const parallelLower = data.parallel.toLowerCase();
+    const skipParallels = ['base', '[base]', 'standard', 'regular', 'common'];
+    if (!skipParallels.some(skip => parallelLower === skip || parallelLower === `[${skip}]`)) {
+      parts.push(data.parallel);
+    }
+  }
   if (data.insertSet) parts.push(data.insertSet);
   if (data.features) {
-    const featuresLower = data.features.toLowerCase();
-    const skipFeatures = ['normal', 'standard', 'regular', 'common'];
-    if (!skipFeatures.some(skip => featuresLower === skip)) {
-      parts.push(data.features);
+    const skipFeatures = ['normal', 'standard', 'regular', 'common', 'base set'];
+    const cleanedFeatures = data.features
+      .split(',')
+      .map(f => f.trim())
+      .filter(f => !skipFeatures.some(skip => f.toLowerCase() === skip))
+      .join(', ');
+    if (cleanedFeatures && cleanedFeatures.length > 0) {
+      parts.push(cleanedFeatures);
     }
   }
   return parts.join(' ').trim();

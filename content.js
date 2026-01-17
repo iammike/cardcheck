@@ -94,6 +94,10 @@ function extractCardData() {
   if (!data.name && data.title) {
     const parsed = parseTitle(data.title);
     Object.assign(data, parsed);
+    // Clean up name from title parsing too
+    if (data.name) {
+      data.name = cleanCardName(data.name);
+    }
   }
 
   // Even if we have a name, parse title to fill in missing year/set/number
@@ -156,7 +160,10 @@ function mapSpecificToData(label, value, data) {
     // Medium priority - overwrites character but not player/athlete
     if (!invalidPlayerNames.includes(value.toLowerCase())) {
       if (data._nameSource !== 'player') {
-        data.name = value;
+        // Clean up card names that contain brand/set names or card type descriptors
+        // e.g., "Hoops DAMIAN LILLARD Basketball Card" -> "DAMIAN LILLARD"
+        const cleanedName = cleanCardName(value);
+        data.name = cleanedName;
         data._nameSource = 'cardname';
       }
     }
@@ -326,6 +333,61 @@ function mapSpecificToData(label, value, data) {
   else if (label === 'cover artist') {
     data.coverArtist = value;
   }
+}
+
+// Clean up card names that contain brand names or card type descriptors
+// e.g., "Hoops DAMIAN LILLARD Basketball Card" -> "DAMIAN LILLARD"
+function cleanCardName(name) {
+  if (!name) return name;
+
+  // Card brands/sets that might appear in card name field
+  const brandPatterns = [
+    /\bhoops\b/gi,
+    /\btopps\b/gi,
+    /\bpanini\b/gi,
+    /\bbowman\b/gi,
+    /\bdonruss\b/gi,
+    /\bupper\s*deck\b/gi,
+    /\bfleer\b/gi,
+    /\bprizm\b/gi,
+    /\bselect\b/gi,
+    /\bmosaic\b/gi,
+    /\boptic\b/gi,
+    /\bchrome\b/gi,
+    /\bscore\b/gi,
+    /\bleaf\b/gi,
+    /\bmaxx\b/gi,
+  ];
+
+  // Card type descriptors to remove
+  const typePatterns = [
+    /\bbasketball\s+card\b/gi,
+    /\bbaseball\s+card\b/gi,
+    /\bfootball\s+card\b/gi,
+    /\bhockey\s+card\b/gi,
+    /\bsoccer\s+card\b/gi,
+    /\bsports\s+card\b/gi,
+    /\btrading\s+card\b/gi,
+    /\brookie\s+card\b/gi,
+  ];
+
+  let cleaned = name;
+
+  // Remove brand names
+  for (const pattern of brandPatterns) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+
+  // Remove card type descriptors
+  for (const pattern of typePatterns) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+
+  // Clean up whitespace
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+  // If we stripped everything, return the original
+  return cleaned.length > 0 ? cleaned : name;
 }
 
 function parseTitle(title) {
