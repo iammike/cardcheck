@@ -224,6 +224,14 @@ h2 {
   border-left: 3px solid #4caf50;
 }
 
+.price-row-surrounding {
+  background: #fff8e1;
+  border-radius: 4px;
+  margin: 0 -8px;
+  padding: 8px !important;
+  border-left: 3px solid #ffc107;
+}
+
 #pricecharting-link {
   display: block;
   text-align: center;

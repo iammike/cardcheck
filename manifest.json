@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "CardChecking",
-  "version": "1.0.0",
-  "description": "Check trading card prices from PriceCharting while browsing eBay listings",
+  "name": "PriceChecking",
+  "version": "1.1.0",
+  "description": "Check prices for trading cards, comics, and collectibles while browsing eBay",
   "permissions": [
     "activeTab"
   ],

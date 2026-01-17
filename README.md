@@ -1,6 +1,6 @@
-# CardChecking
+# PriceChecking
 
-A Chrome extension that helps card collectors check prices while browsing eBay listings. Supports sports cards, trading card games (TCGs), and non-sport collectible cards.
+A Chrome extension that helps collectors check prices while browsing eBay listings. Supports sports cards, trading card games (TCGs), comics, and other collectibles.
 
 ## Screenshots
 
@@ -19,7 +19,7 @@ A Chrome extension that helps card collectors check prices while browsing eBay l
 - **Real-time pricing** - Fetches current market prices from SportsCardsPro and PriceCharting
 - **Smart routing** - Sports cards go to SportsCardsPro, TCGs and non-sport cards go to PriceCharting
 - **Grade matching** - Highlights the price for your card's specific grade
-- **Multi-grader support** - Works with PSA, BGS, SGC, CGC, CSG, HGA, and more
+- **Multi-grader support** - Works with PSA, BGS, SGC, CGC, CBCS, PGX, and more
 
 ### Supported Card Types
 
@@ -28,6 +28,10 @@ A Chrome extension that helps card collectors check prices while browsing eBay l
 
 **Trading Card Games (TCGs)**
 - Pokémon, Magic: The Gathering, Yu-Gi-Oh!, Digimon, One Piece TCG, Disney Lorcana
+
+**Comic Books**
+- CGC, CBCS, and PGX graded comics
+- All major publishers (Marvel, DC, Image, Dark Horse, and more)
 
 **Non-Sport Collectibles**
 - Star Wars, Marvel, Garbage Pail Kids, and more
@@ -46,7 +50,7 @@ A Chrome extension that helps card collectors check prices while browsing eBay l
 ## Usage
 
 1. Navigate to any eBay card listing (sports, TCG, or collectible)
-2. Click the CardChecking icon in your toolbar
+2. Click the PriceChecking icon in your toolbar
 3. View detected card info and click the search button
 4. Browse prices across all grades
 
@@ -57,7 +61,7 @@ The extension:
 2. Determines the card type (sports, TCG, or non-sport)
 3. Routes to the appropriate pricing database:
    - Sports cards → SportsCardsPro
-   - TCGs and non-sport cards → PriceCharting
+   - TCGs, comics, and non-sport cards → PriceCharting
 4. Displays current market prices by grade
 5. Highlights the matching grade for easy comparison
 

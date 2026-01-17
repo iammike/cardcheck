@@ -50,7 +50,8 @@ function showError(message) {
 
 function showNoResults() {
   const siteName = isSportsCard(currentCardData) ? 'SportsCardsPro' : 'PriceCharting';
-  elements.errorText.textContent = `No matching cards found on ${siteName}. This card may not be in the database.`;
+  const itemType = isComicBook(currentCardData) ? 'comics' : 'cards';
+  elements.errorText.textContent = `No matching ${itemType} found on ${siteName}. This item may not be in the database.`;
   showSection('error');
 }
 
@@ -58,22 +59,43 @@ function showNoResults() {
 function buildCardSummaryHTML(data) {
   if (!data) return '';
 
+  const isComic = isComicBook(data);
   const cleanNumber = data.number ? data.number.replace(/^#/, '') : null;
   const invalidSets = ['single', 'lot', 'set', 'bundle', 'collection'];
   const cleanSet = data.set && !invalidSets.includes(data.set.toLowerCase()) ? data.set : null;
 
   const lines = [];
-  // Player name first as the title
-  if (data.name) lines.push(`<p class="summary-title">${escapeHtml(data.name)}</p>`);
+  // Title: For comics use series, for cards use name
+  const displayTitle = isComic && data.series ? data.series : data.name;
+  if (displayTitle) lines.push(`<p class="summary-title">${escapeHtml(displayTitle)}</p>`);
   // Then the details
   // Skip year if the set already contains it
   const setContainsYear = cleanSet && data.year && cleanSet.includes(data.year);
   if (data.year && !setContainsYear) lines.push(`<p><span class="summary-label">Year:</span> ${escapeHtml(data.year)}</p>`);
-  if (cleanSet) lines.push(`<p><span class="summary-label">Set:</span> ${escapeHtml(cleanSet)}</p>`);
-  else if (data.manufacturer) lines.push(`<p><span class="summary-label">Brand:</span> ${escapeHtml(data.manufacturer)}</p>`);
-  if (cleanNumber) lines.push(`<p><span class="summary-label">Card #:</span> ${escapeHtml(cleanNumber)}</p>`);
-  if (data.parallel) lines.push(`<p><span class="summary-label">Parallel:</span> ${escapeHtml(data.parallel)}</p>`);
-  if (data.insertSet) lines.push(`<p><span class="summary-label">Insert:</span> ${escapeHtml(data.insertSet)}</p>`);
+
+  // For comics, show publisher instead of set
+  if (isComic) {
+    if (data.publisher) lines.push(`<p><span class="summary-label">Publisher:</span> ${escapeHtml(data.publisher)}</p>`);
+  } else {
+    if (cleanSet) lines.push(`<p><span class="summary-label">Set:</span> ${escapeHtml(cleanSet)}</p>`);
+    else if (data.manufacturer) lines.push(`<p><span class="summary-label">Brand:</span> ${escapeHtml(data.manufacturer)}</p>`);
+  }
+
+  // Use appropriate label for number
+  const numberLabel = isComic ? 'Issue #:' : 'Card #:';
+  if (cleanNumber) lines.push(`<p><span class="summary-label">${numberLabel}</span> ${escapeHtml(cleanNumber)}</p>`);
+
+  // For comics, show variant cover; for cards, show parallel/insert
+  if (isComic) {
+    if (data.variant && data.coverArtist) {
+      lines.push(`<p><span class="summary-label">Variant:</span> ${escapeHtml(data.coverArtist)}</p>`);
+    } else if (data.variant) {
+      lines.push(`<p><span class="summary-label">Variant:</span> Cover Variant</p>`);
+    }
+  } else {
+    if (data.parallel) lines.push(`<p><span class="summary-label">Parallel:</span> ${escapeHtml(data.parallel)}</p>`);
+    if (data.insertSet) lines.push(`<p><span class="summary-label">Insert:</span> ${escapeHtml(data.insertSet)}</p>`);
+  }
   if (data.grader && data.grade) lines.push(`<p><span class="summary-label">Grade:</span> ${escapeHtml(data.grader)} ${escapeHtml(data.grade)}</p>`);
   else if (data.grade) lines.push(`<p><span class="summary-label">Grade:</span> ${escapeHtml(data.grade)}</p>`);
 
@@ -166,19 +188,55 @@ async function init() {
   }
 }
 
+function getItemTypeName(data) {
+  if (isComicBook(data)) return 'Comic';
+  return 'Card';
+}
+
 function displayCardInfo(data) {
+  const isComic = isComicBook(data);
+  const itemType = getItemTypeName(data);
+
   // Clean up data for display
   const cleanNumber = data.number ? data.number.replace(/^#/, '') : null;
   const invalidSets = ['single', 'lot', 'set', 'bundle', 'collection'];
   const cleanSet = data.set && !invalidSets.includes(data.set.toLowerCase()) ? data.set : null;
   const setContainsYear = cleanSet && data.year && cleanSet.includes(data.year);
 
-  elements.cardName.textContent = data.name || 'Unknown Card';
+  // Update header based on item type
+  const detectedHeader = document.querySelector('#card-info .detected h2');
+  if (detectedHeader) {
+    detectedHeader.textContent = `Detected ${itemType}`;
+  }
+
+  // For comics, use series as the primary name if available
+  if (isComic && data.series) {
+    elements.cardName.textContent = data.series;
+  } else {
+    elements.cardName.textContent = data.name || `Unknown ${itemType}`;
+  }
+
   elements.cardYear.textContent = (data.year && !setContainsYear) ? `Year: ${data.year}` : '';
-  elements.cardSet.textContent = cleanSet ? `Set: ${cleanSet}` : '';
-  elements.cardInsert.textContent = data.insertSet ? `Insert: ${data.insertSet}` : '';
-  elements.cardParallel.textContent = data.parallel ? `Parallel: ${data.parallel}` : '';
-  elements.cardNumber.textContent = cleanNumber ? `Card #: ${cleanNumber}` : '';
+
+  // For comics, show publisher instead of set
+  if (isComic) {
+    elements.cardSet.textContent = data.publisher ? `Publisher: ${data.publisher}` : '';
+    elements.cardNumber.textContent = cleanNumber ? `Issue #: ${cleanNumber}` : '';
+    // Show variant cover info
+    if (data.variant && data.coverArtist) {
+      elements.cardParallel.textContent = `Variant: ${data.coverArtist}`;
+    } else if (data.variant) {
+      elements.cardParallel.textContent = 'Variant Cover';
+    } else {
+      elements.cardParallel.textContent = '';
+    }
+    elements.cardInsert.textContent = '';
+  } else {
+    elements.cardSet.textContent = cleanSet ? `Set: ${cleanSet}` : '';
+    elements.cardNumber.textContent = cleanNumber ? `Card #: ${cleanNumber}` : '';
+    elements.cardInsert.textContent = data.insertSet ? `Insert: ${data.insertSet}` : '';
+    elements.cardParallel.textContent = data.parallel ? `Parallel: ${data.parallel}` : '';
+  }
   elements.cardManufacturer.textContent = data.manufacturer ? `Brand: ${data.manufacturer}` : '';
   elements.cardFeatures.textContent = data.features ? `Features: ${data.features}` : '';
   elements.cardError.textContent = data.error ? (data.error === 'Error' ? 'Note: Error Card' : `Error: ${data.error}`) : '';
@@ -375,10 +433,25 @@ async function tryExactMatchWithPrices(card) {
 }
 
 function buildSearchQuery(data, includeVariant = true, includeNumber = true, includeYear = true, includeSet = true) {
+  // Check if this is a comic book - they need different query format
+  if (isComicBook(data)) {
+    return buildComicSearchQuery(data, includeNumber, includeYear);
+  }
+
   // Player name, set, card number, and parallel/variant are key identifiers
   // Note: "error" is intentionally not included - too generic and pollutes search results
   const invalidSets = ['single', 'lot', 'set', 'bundle', 'collection'];
-  const cleanSet = data.set && !invalidSets.includes(data.set.toLowerCase()) ? data.set : null;
+  let cleanSet = data.set && !invalidSets.includes(data.set.toLowerCase()) ? data.set : null;
+
+  // For TCGs, prefer game name over messy set names
+  // Set names like "2024 Digimon Pb18-Premium Heroines Set" are too specific and won't match
+  const tcgGames = ['pokemon', 'pokémon', 'digimon', 'magic', 'yugioh', 'yu-gi-oh', 'one piece', 'lorcana', 'weiss schwarz'];
+  if (data.game && tcgGames.some(g => data.game.toLowerCase().includes(g))) {
+    // If set looks messy (very long or contains product codes like Pb18), use game name instead
+    if (cleanSet && (cleanSet.length > 30 || /\b[A-Z]{2,}\d+/.test(cleanSet))) {
+      cleanSet = data.game;
+    }
+  }
 
   const parts = [];
   if (data.name) parts.push(data.name);
@@ -388,6 +461,9 @@ function buildSearchQuery(data, includeVariant = true, includeNumber = true, inc
   }
   if (includeSet && cleanSet) {
     parts.push(cleanSet);
+  } else if (includeSet && data.game) {
+    // Use game name as fallback for TCGs
+    parts.push(data.game);
   } else if (includeSet && data.manufacturer) {
     // Use manufacturer as fallback when no set
     parts.push(data.manufacturer);
@@ -417,6 +493,42 @@ function buildSearchQuery(data, includeVariant = true, includeNumber = true, inc
   return parts.join(' ').trim();
 }
 
+function buildComicSearchQuery(data, includeNumber = true, includeYear = true, includeVariant = true) {
+  // Comics use series + issue number format
+  // e.g., "Amazing Spider-Man #129" or "Batman 2016 #1"
+  // Variants: "Spider-Man #1 Stegman" or "Spider-Man #1 Variant"
+  const parts = [];
+
+  // Use series if available, otherwise fall back to name
+  if (data.series) {
+    parts.push(data.series);
+  } else if (data.name) {
+    parts.push(data.name);
+  }
+
+  // Year helps disambiguate long-running series with multiple volumes
+  if (includeYear && data.year) {
+    parts.push(data.year);
+  }
+
+  // Issue number
+  if (includeNumber && data.number) {
+    let num = data.number.replace(/^#/, '');
+    parts.push('#' + num);
+  }
+
+  // Include variant/cover artist info for better matching
+  if (includeVariant && data.variant && data.coverArtist) {
+    // Use cover artist name for variant (e.g., "Stegman")
+    // Take just the last name if it's a full name
+    const artistName = data.coverArtist.split(',')[0].trim(); // First artist if multiple
+    const lastName = artistName.split(' ').pop(); // Last name
+    parts.push(lastName);
+  }
+
+  return parts.join(' ').trim();
+}
+
 function hasVariantData(data) {
   if (data.parallel || data.insertSet) return true;
   // Check for non-generic features
@@ -431,6 +543,11 @@ function hasVariantData(data) {
 }
 
 function isSportsCard(data) {
+  // Comics are not sports cards - check first
+  if (isComicBook(data)) {
+    return false;
+  }
+
   // Check if "sport" field exists and has a common sports value
   if (data.sport) {
     const sportLower = data.sport.toLowerCase();
@@ -468,11 +585,76 @@ function isSportsCard(data) {
   return true;
 }
 
+function isComicBook(data) {
+  // Check for era field - unique to comics
+  if (data.era) {
+    return true;
+  }
+
+  // Check for type field indicating comic book
+  if (data.type) {
+    const typeLower = data.type.toLowerCase();
+    if (typeLower.includes('comic')) {
+      return true;
+    }
+  }
+
+  // Check for series field (comics have series, cards have sets)
+  // But ignore if it's a known card brand (some eBay listings misuse this field)
+  if (data.series) {
+    const cardBrands = ['topps', 'panini', 'upper deck', 'bowman', 'donruss', 'fleer', 'score', 'leaf', 'maxx', 'press pass'];
+    const seriesLower = data.series.toLowerCase();
+    if (!cardBrands.some(brand => seriesLower.includes(brand))) {
+      return true;
+    }
+  }
+
+  // Check for comic-only graders (CBCS and PGX only do comics)
+  if (data.grader) {
+    const comicOnlyGraders = ['CBCS', 'PGX'];
+    if (comicOnlyGraders.includes(data.grader.toUpperCase())) {
+      return true;
+    }
+  }
+
+  // Check for known comic publishers
+  if (data.publisher) {
+    const comicPublishers = ['marvel', 'dc comics', 'dc', 'image', 'dark horse', 'idw', 'boom', 'dynamite', 'valiant', 'archie', 'oni press', 'aftershock', 'scout', 'zenescope', 'ablaze', 'titan'];
+    const publisherLower = data.publisher.toLowerCase();
+    if (comicPublishers.some(p => publisherLower.includes(p))) {
+      return true;
+    }
+  }
+
+  // Check title for comic indicators
+  if (data.title) {
+    const titleLower = data.title.toLowerCase();
+    // Check for comic graders in title
+    if (/\b(cbcs|pgx)\s*\d/i.test(data.title)) {
+      return true;
+    }
+    // Check for common comic keywords
+    const comicKeywords = ['comic', 'graphic novel', 'variant cover', 'newsstand', 'direct edition', 'first print', '1st print', 'cgc signature'];
+    if (comicKeywords.some(kw => titleLower.includes(kw))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function displaySearchResults(results, showingVariants = false, exactMatchName = null) {
   // Store for back button
   lastSearchResults = results;
   lastShowingVariants = showingVariants;
   lastExactMatchName = exactMatchName;
+
+  // Update header based on item type
+  const selectHeader = document.querySelector('#search-results h2');
+  if (selectHeader) {
+    const itemType = isComicBook(currentCardData) ? 'Comic' : 'Card';
+    selectHeader.textContent = `Select ${itemType}`;
+  }
 
   // Show card summary at the top for reference
   elements.resultsCardSummary.innerHTML = buildCardSummaryHTML(currentCardData);
@@ -491,10 +673,11 @@ function displaySearchResults(results, showingVariants = false, exactMatchName =
     elements.resultsList.appendChild(note);
   }
 
-  // Always show a note that exact card may not be listed
+  // Always show a note that exact item may not be listed
   const disclaimer = document.createElement('div');
   disclaimer.className = 'results-disclaimer';
-  disclaimer.textContent = 'Your exact card may not be listed.';
+  const disclaimerType = isComicBook(currentCardData) ? 'comic' : 'card';
+  disclaimer.textContent = `Your exact ${disclaimerType} may not be listed.`;
   elements.resultsList.appendChild(disclaimer);
 
   results.forEach(result => {
@@ -556,17 +739,41 @@ function displayPrices(prices, card) {
   // Check if we have a grade to highlight
   const cardGrade = currentCardData?.grade;
   const cardGrader = currentCardData?.grader;
+  const cardGradeNum = cardGrade ? parseGradeNumber(cardGrade) : null;
 
-  // Sort: Matching grade first, then Ungraded, then highest grade to lowest
+  // Check for exact match first
+  const hasExactMatch = cardGrade && Object.keys(prices.grades).some(g => isGradeMatch(g, cardGrade, cardGrader));
+
+  // Find surrounding grades if no exact match
+  let surroundingGrades = { below: null, above: null };
+  if (cardGradeNum && !hasExactMatch) {
+    surroundingGrades = findSurroundingGrades(prices.grades, cardGradeNum);
+  }
+
+  // Sort: Matching grade first, then surrounding grades, then Ungraded, then highest to lowest
   const sortedGrades = Object.entries(prices.grades).sort((a, b) => {
     const [gradeA, priceA] = a;
     const [gradeB, priceB] = b;
 
-    // Matching grade always first
+    // Exact matching grade always first
     const matchA = cardGrade && isGradeMatch(gradeA, cardGrade, cardGrader);
     const matchB = cardGrade && isGradeMatch(gradeB, cardGrade, cardGrader);
     if (matchA && !matchB) return -1;
     if (matchB && !matchA) return 1;
+
+    // Surrounding grades next (when no exact match)
+    if (!hasExactMatch && cardGradeNum) {
+      const isSurroundingA = gradeA === surroundingGrades.above || gradeA === surroundingGrades.below;
+      const isSurroundingB = gradeB === surroundingGrades.above || gradeB === surroundingGrades.below;
+      if (isSurroundingA && !isSurroundingB) return -1;
+      if (isSurroundingB && !isSurroundingA) return 1;
+      // If both surrounding, put higher grade first (consistent with rest of list)
+      if (isSurroundingA && isSurroundingB) {
+        const numA = parseGradeNumber(gradeA);
+        const numB = parseGradeNumber(gradeB);
+        return numB - numA; // Higher grade first among surrounding
+      }
+    }
 
     // Ungraded next (if not the matching grade)
     if (gradeA.toLowerCase() === 'ungraded') return -1;
@@ -589,9 +796,13 @@ function displayPrices(prices, card) {
     const row = document.createElement('div');
     row.className = 'price-row';
 
-    // Check if this row matches the card's grade
+    // Check if this row matches the card's grade exactly
     if (cardGrade && isGradeMatch(grade, cardGrade, cardGrader)) {
       row.classList.add('price-row-highlight');
+    }
+    // Or if it's a surrounding grade (when no exact match)
+    else if (!hasExactMatch && cardGradeNum && (grade === surroundingGrades.above || grade === surroundingGrades.below)) {
+      row.classList.add('price-row-surrounding');
     }
 
     row.innerHTML = `
@@ -621,6 +832,35 @@ function parseGradeNumber(grade) {
   // Extract numeric grade from strings like "Grade 9", "PSA 10", "BGS 9.5", "TAG 10"
   const match = grade.match(/([\d.]+)/);
   return match ? parseFloat(match[1]) : 0;
+}
+
+function findSurroundingGrades(grades, targetGradeNum) {
+  // Find the grades immediately above and below the target grade
+  // Returns { below: gradeName, above: gradeName }
+  let below = null;
+  let above = null;
+  let belowNum = -Infinity;
+  let aboveNum = Infinity;
+
+  for (const gradeName of Object.keys(grades)) {
+    if (gradeName.toLowerCase() === 'ungraded') continue;
+
+    const num = parseGradeNumber(gradeName);
+    if (num === 0) continue;
+
+    // Find closest grade below target
+    if (num < targetGradeNum && num > belowNum) {
+      belowNum = num;
+      below = gradeName;
+    }
+    // Find closest grade above target
+    if (num > targetGradeNum && num < aboveNum) {
+      aboveNum = num;
+      above = gradeName;
+    }
+  }
+
+  return { below, above };
 }
 
 function isGradeMatch(priceListGrade, cardGrade, cardGrader) {
@@ -667,12 +907,18 @@ function updateReportIssueLink() {
     cleanUrl = cleanUrl.split('?')[0];
   }
 
+  // Determine item type for dynamic text
+  const isComic = currentCardData ? isComicBook(currentCardData) : false;
+  const itemType = isComic ? 'Comic' : 'Card';
+  const itemTypeLower = itemType.toLowerCase();
+  const numberLabel = isComic ? 'Issue #' : 'Card #';
+
   // Build issue body with debugging info
   const lines = [];
 
   // User input section at the top
   lines.push('## What went wrong?');
-  lines.push('<!-- Describe the issue here - e.g., "Card not found", "Wrong price shown", "Name extracted incorrectly" -->');
+  lines.push(`<!-- Describe the issue here - e.g., "${itemType} not found", "Wrong price shown", "Name extracted incorrectly" -->`);
   lines.push('');
   lines.push('');
   lines.push('');
@@ -688,16 +934,21 @@ function updateReportIssueLink() {
     const query = buildSearchQuery(currentCardData);
     lines.push('**Search Query:** `' + query + '`');
     lines.push('');
-    lines.push(`**Card Type:** ${isSportsCard(currentCardData) ? 'Sports Card (SportsCardsPro)' : 'Non-Sports (PriceCharting)'}`);
+    const detectedType = isSportsCard(currentCardData) ? 'Sports Card (SportsCardsPro)' :
+                       isComic ? 'Comic Book (PriceCharting)' : 'Non-Sports (PriceCharting)';
+    lines.push(`**Item Type:** ${detectedType}`);
     lines.push('');
-    lines.push('**Detected Card Data:**');
+    lines.push(`**Detected ${itemType} Data:**`);
     if (currentCardData.name) lines.push(`- Name: ${currentCardData.name}`);
+    if (currentCardData.series) lines.push(`- Series: ${currentCardData.series}`);
     if (currentCardData.year) lines.push(`- Year: ${currentCardData.year}`);
     if (currentCardData.set) lines.push(`- Set: ${currentCardData.set}`);
-    if (currentCardData.number) lines.push(`- Card #: ${currentCardData.number}`);
+    if (currentCardData.number) lines.push(`- ${numberLabel}: ${currentCardData.number}`);
     if (currentCardData.parallel) lines.push(`- Parallel: ${currentCardData.parallel}`);
     if (currentCardData.insertSet) lines.push(`- Insert: ${currentCardData.insertSet}`);
     if (currentCardData.manufacturer) lines.push(`- Manufacturer: ${currentCardData.manufacturer}`);
+    if (currentCardData.publisher) lines.push(`- Publisher: ${currentCardData.publisher}`);
+    if (currentCardData.era) lines.push(`- Era: ${currentCardData.era}`);
     if (currentCardData.grader) lines.push(`- Grader: ${currentCardData.grader}`);
     if (currentCardData.grade) lines.push(`- Grade: ${currentCardData.grade}`);
     if (currentCardData.sport) lines.push(`- Sport: ${currentCardData.sport}`);
@@ -705,18 +956,22 @@ function updateReportIssueLink() {
     if (currentCardData.features) lines.push(`- Features: ${currentCardData.features}`);
     if (currentCardData.error) lines.push(`- Error: ${currentCardData.error}`);
   } else {
-    lines.push('No card data extracted');
+    lines.push('No data extracted');
   }
   lines.push('');
   lines.push('</details>');
 
   const body = lines.join('\n');
-  const title = currentCardData?.name
-    ? `Card not detected correctly: ${currentCardData.name}`
-    : 'Card not detected correctly';
+  const displayName = currentCardData?.series || currentCardData?.name;
+  const title = displayName
+    ? `${itemType} not detected correctly: ${displayName}`
+    : `${itemType} not detected correctly`;
 
   const url = `${baseUrl}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=bug`;
   elements.reportIssueLink.href = url;
+
+  // Update link text based on item type
+  elements.reportIssueLink.textContent = `${itemType} not working? Report it`;
 }
 
 // Start
