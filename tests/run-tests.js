@@ -396,7 +396,17 @@ function buildSearchQuery(data) {
   }
 
   const invalidSets = ['single', 'lot', 'set', 'bundle', 'collection'];
-  const cleanSet = data.set && !invalidSets.includes(data.set.toLowerCase()) ? data.set : null;
+  let cleanSet = data.set && !invalidSets.includes(data.set.toLowerCase()) ? data.set : null;
+
+  // For TCGs, prefer game name over messy set names
+  // Set names like "2024 Digimon Pb18-Premium Heroines Set" are too specific
+  const tcgGames = ['pokemon', 'pokémon', 'digimon', 'magic', 'yugioh', 'yu-gi-oh', 'one piece', 'lorcana', 'weiss schwarz'];
+  if (data.game && tcgGames.some(g => data.game.toLowerCase().includes(g))) {
+    // If set looks messy (very long or contains product codes), use game name instead
+    if (cleanSet && (cleanSet.length > 30 || /\b[A-Z]{2,}\d+/.test(cleanSet))) {
+      cleanSet = data.game;
+    }
+  }
 
   const parts = [];
   if (data.name) parts.push(data.name);
@@ -405,6 +415,9 @@ function buildSearchQuery(data) {
   }
   if (cleanSet) {
     parts.push(cleanSet);
+  } else if (data.game) {
+    // Use game name as fallback for TCGs
+    parts.push(data.game);
   } else if (data.manufacturer) {
     // Use manufacturer as fallback when no set
     parts.push(data.manufacturer);
